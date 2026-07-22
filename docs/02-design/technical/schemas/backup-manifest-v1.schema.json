@@ -1,0 +1,50 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://personalbookkeeping.local/schema/backup-manifest-v1.schema.json",
+  "title": "PersonalBookkeeping backup manifest v1",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "format",
+    "formatVersion",
+    "appVersionName",
+    "appVersionCode",
+    "databaseSchemaVersion",
+    "createdAt",
+    "currencyCode",
+    "counts",
+    "dataFile"
+  ],
+  "properties": {
+    "format": { "const": "personal-bookkeeping-backup" },
+    "formatVersion": { "const": 1 },
+    "appVersionName": { "type": "string", "minLength": 1, "maxLength": 50 },
+    "appVersionCode": { "type": "integer", "minimum": 1 },
+    "databaseSchemaVersion": { "type": "integer", "minimum": 1 },
+    "createdAt": { "type": "string", "format": "date-time" },
+    "currencyCode": { "const": "CNY" },
+    "counts": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["ledgers", "accounts", "categories", "transactions", "budgets"],
+      "properties": {
+        "ledgers": { "const": 1 },
+        "accounts": { "type": "integer", "minimum": 1, "maximum": 10000 },
+        "categories": { "type": "integer", "minimum": 1, "maximum": 10000 },
+        "transactions": { "type": "integer", "minimum": 0, "maximum": 1000000 },
+        "budgets": { "type": "integer", "minimum": 0, "maximum": 100000 }
+      }
+    },
+    "dataFile": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["path", "bytes", "sha256"],
+      "properties": {
+        "path": { "const": "data.json" },
+        "bytes": { "type": "integer", "minimum": 2, "maximum": 104857600 },
+        "sha256": { "type": "string", "pattern": "^[a-f0-9]{64}$" }
+      }
+    }
+  }
+}
+

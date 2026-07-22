@@ -1,0 +1,136 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://personalbookkeeping.local/schema/backup-data-v1.schema.json",
+  "title": "PersonalBookkeeping backup data v1",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schemaVersion", "ledger", "accounts", "categories", "transactions", "budgets", "preferences"],
+  "$defs": {
+    "id": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 100,
+      "pattern": "^[A-Za-z0-9][A-Za-z0-9._:-]*$"
+    },
+    "timestamp": { "type": "string", "format": "date-time" },
+    "nullableId": { "oneOf": [{ "$ref": "#/$defs/id" }, { "type": "null" }] },
+    "account": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["id", "name", "type", "openingBalanceMinor", "includeInAssets", "status", "sortOrder", "createdAt", "updatedAt"],
+      "properties": {
+        "id": { "$ref": "#/$defs/id" },
+        "name": { "type": "string", "minLength": 1, "maxLength": 40 },
+        "type": { "enum": ["CASH", "BANK", "E_WALLET", "STORED_VALUE", "CREDIT_CARD", "OTHER"] },
+        "openingBalanceMinor": { "type": "integer", "minimum": -99999999999, "maximum": 99999999999 },
+        "includeInAssets": { "type": "boolean" },
+        "status": { "enum": ["ACTIVE", "INACTIVE"] },
+        "sortOrder": { "type": "integer", "minimum": 0 },
+        "createdAt": { "$ref": "#/$defs/timestamp" },
+        "updatedAt": { "$ref": "#/$defs/timestamp" }
+      }
+    },
+    "category": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["id", "kind", "name", "iconKey", "colorKey", "status", "sortOrder", "createdAt", "updatedAt"],
+      "properties": {
+        "id": { "$ref": "#/$defs/id" },
+        "kind": { "enum": ["EXPENSE", "INCOME"] },
+        "name": { "type": "string", "minLength": 1, "maxLength": 40 },
+        "iconKey": { "type": "string", "minLength": 1, "maxLength": 40 },
+        "colorKey": { "type": "string", "minLength": 1, "maxLength": 40 },
+        "status": { "enum": ["ACTIVE", "INACTIVE"] },
+        "sortOrder": { "type": "integer", "minimum": 0 },
+        "createdAt": { "$ref": "#/$defs/timestamp" },
+        "updatedAt": { "$ref": "#/$defs/timestamp" }
+      }
+    },
+    "transaction": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["id", "type", "amountMinor", "categoryId", "accountId", "targetAccountId", "occurredAt", "zoneId", "localDate", "note", "createdAt", "updatedAt"],
+      "properties": {
+        "id": { "$ref": "#/$defs/id" },
+        "type": { "enum": ["EXPENSE", "INCOME", "TRANSFER"] },
+        "amountMinor": { "type": "integer", "minimum": 1, "maximum": 99999999999 },
+        "categoryId": { "$ref": "#/$defs/nullableId" },
+        "accountId": { "$ref": "#/$defs/id" },
+        "targetAccountId": { "$ref": "#/$defs/nullableId" },
+        "occurredAt": { "$ref": "#/$defs/timestamp" },
+        "zoneId": { "type": "string", "minLength": 1, "maxLength": 100 },
+        "localDate": { "type": "string", "format": "date" },
+        "note": { "type": ["string", "null"], "maxLength": 500 },
+        "createdAt": { "$ref": "#/$defs/timestamp" },
+        "updatedAt": { "$ref": "#/$defs/timestamp" }
+      },
+      "oneOf": [
+        {
+          "properties": {
+            "type": { "enum": ["EXPENSE", "INCOME"] },
+            "categoryId": { "$ref": "#/$defs/id" },
+            "targetAccountId": { "type": "null" }
+          }
+        },
+        {
+          "properties": {
+            "type": { "const": "TRANSFER" },
+            "categoryId": { "type": "null" },
+            "targetAccountId": { "$ref": "#/$defs/id" }
+          }
+        }
+      ]
+    },
+    "budget": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["id", "periodKey", "scopeKey", "categoryId", "amountMinor", "createdAt", "updatedAt"],
+      "properties": {
+        "id": { "$ref": "#/$defs/id" },
+        "periodKey": { "type": "string", "pattern": "^[0-9]{4}-(0[1-9]|1[0-2])$" },
+        "scopeKey": { "type": "string", "minLength": 1, "maxLength": 120 },
+        "categoryId": { "$ref": "#/$defs/nullableId" },
+        "amountMinor": { "type": "integer", "minimum": 1, "maximum": 99999999999 },
+        "createdAt": { "$ref": "#/$defs/timestamp" },
+        "updatedAt": { "$ref": "#/$defs/timestamp" }
+      },
+      "oneOf": [
+        { "properties": { "scopeKey": { "const": "TOTAL" }, "categoryId": { "type": "null" } } },
+        { "properties": { "scopeKey": { "pattern": "^CATEGORY:[A-Za-z0-9._:-]+$" }, "categoryId": { "$ref": "#/$defs/id" } } }
+      ]
+    }
+  },
+  "properties": {
+    "schemaVersion": { "const": 1 },
+    "ledger": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["id", "name", "currencyCode", "monthStartDay", "createdAt", "updatedAt"],
+      "properties": {
+        "id": { "$ref": "#/$defs/id" },
+        "name": { "type": "string", "minLength": 1, "maxLength": 40 },
+        "currencyCode": { "const": "CNY" },
+        "monthStartDay": { "const": 1 },
+        "createdAt": { "$ref": "#/$defs/timestamp" },
+        "updatedAt": { "$ref": "#/$defs/timestamp" }
+      }
+    },
+    "accounts": { "type": "array", "minItems": 1, "maxItems": 10000, "items": { "$ref": "#/$defs/account" } },
+    "categories": { "type": "array", "minItems": 1, "maxItems": 10000, "items": { "$ref": "#/$defs/category" } },
+    "transactions": { "type": "array", "maxItems": 1000000, "items": { "$ref": "#/$defs/transaction" } },
+    "budgets": { "type": "array", "maxItems": 100000, "items": { "$ref": "#/$defs/budget" } },
+    "preferences": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["themeMode", "hideAmounts", "recentExpenseAccountId", "recentIncomeAccountId", "updatedAt"],
+      "properties": {
+        "themeMode": { "enum": ["SYSTEM", "LIGHT", "DARK"] },
+        "hideAmounts": { "type": "boolean" },
+        "recentExpenseAccountId": { "$ref": "#/$defs/nullableId" },
+        "recentIncomeAccountId": { "$ref": "#/$defs/nullableId" },
+        "updatedAt": { "$ref": "#/$defs/timestamp" }
+      }
+    }
+  }
+}
+
