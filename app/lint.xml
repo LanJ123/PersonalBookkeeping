@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="utf-8"?>
+<lint>
+    <!-- Adaptive icons require a v26-qualified resource type; placing adaptive-icon in
+         unqualified mipmap-anydpi fails AAPT even though the project minSdk is 28. -->
+    <issue id="ObsoleteSdkInt">
+        <ignore regexp="mipmap-anydpi-v26" />
+    </issue>
+
+    <!-- API 33 variants provide the monochrome mask. Lint also evaluates the v26 fallback
+         in isolation, where monochrome is intentionally omitted for older framework parsers. -->
+    <issue id="MonochromeLauncherIcon">
+        <ignore regexp="mipmap-anydpi-v26[\\/]ic_launcher(_round)?\.xml" />
+    </issue>
+</lint>
