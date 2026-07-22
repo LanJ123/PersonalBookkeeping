@@ -3,21 +3,38 @@ package com.personalbookkeeping.app
 import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
-import androidx.compose.foundation.layout.Box
-import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.material3.Text
-import androidx.compose.ui.Alignment
-import androidx.compose.ui.Modifier
+import androidx.activity.viewModels
+import androidx.compose.runtime.getValue
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.personalbookkeeping.ui.theme.BookkeepingTheme
+import com.personalbookkeeping.ui.transaction.TransactionEditorScreen
+import com.personalbookkeeping.ui.transaction.TransactionEditorViewModel
+import com.personalbookkeeping.ui.transaction.TransactionEditorViewModelFactory
 
 class MainActivity : ComponentActivity() {
+    private val viewModel: TransactionEditorViewModel by viewModels {
+        val container = (application as PersonalBookkeepingApplication).container
+        TransactionEditorViewModelFactory(
+            createTransaction = container.createTransactionUseCase,
+            repository = container.transactionRepository,
+        )
+    }
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContent {
             BookkeepingTheme {
-                Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-                    Text("个人记账 · I0 工程基座")
-                }
+                val state by viewModel.state.collectAsStateWithLifecycle()
+                TransactionEditorScreen(
+                    state = state,
+                    onAmountChanged = viewModel::onAmountChanged,
+                    onNoteChanged = viewModel::onNoteChanged,
+                    onTypeSelected = viewModel::onTypeSelected,
+                    onAccountSelected = viewModel::onAccountSelected,
+                    onTargetAccountSelected = viewModel::onTargetAccountSelected,
+                    onCategorySelected = viewModel::onCategorySelected,
+                    onSave = viewModel::save,
+                )
             }
         }
     }

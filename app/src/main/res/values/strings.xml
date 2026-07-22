@@ -1,4 +1,36 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
     <string name="app_name">个人记账</string>
+    <string name="iteration_badge">I1 · 核心记账切片</string>
+    <string name="transaction_editor_title">记一笔</string>
+    <string name="transaction_type_expense">支出</string>
+    <string name="transaction_type_income">收入</string>
+    <string name="transaction_type_transfer">转账</string>
+    <string name="amount_label">金额</string>
+    <string name="amount_placeholder">0.00</string>
+    <string name="category_label">分类</string>
+    <string name="account_label">账户</string>
+    <string name="source_account_label">转出账户</string>
+    <string name="target_account_label">转入账户</string>
+    <string name="note_label">备注（可选）</string>
+    <string name="save_transaction">保存</string>
+    <string name="saving_transaction">正在保存…</string>
+    <string name="initializing_data">正在准备本地账本…</string>
+    <string name="recent_transactions">最近流水</string>
+    <string name="recent_transactions_empty">保存第一笔后，流水会显示在这里。</string>
+    <string name="save_success">已保存，本地账本已更新。</string>
+    <string name="save_failure">保存失败，当前输入已保留，请重试。</string>
+    <string name="amount_error_empty">请输入金额。</string>
+    <string name="amount_error_invalid">金额格式不正确。</string>
+    <string name="amount_error_non_positive">金额必须大于 0。</string>
+    <string name="amount_error_precision">金额最多保留两位小数。</string>
+    <string name="amount_error_above_max">单笔金额不能超过 999,999,999.99 元。</string>
+    <string name="validation_account_required">请选择账户。</string>
+    <string name="validation_category_required">请选择分类。</string>
+    <string name="validation_target_required">请选择转入账户。</string>
+    <string name="validation_accounts_differ">转出和转入账户不能相同。</string>
+    <string name="validation_note_too_long">备注不能超过 500 个字符。</string>
+    <string name="validation_generic">当前交易信息不完整，请检查后重试。</string>
+    <string name="transaction_flow">%1$s → %2$s</string>
+    <string name="transaction_category_account">%1$s · %2$s</string>
 </resources>
