@@ -5,6 +5,7 @@ import androidx.room.Database
 import androidx.room.Room
 import androidx.room.RoomDatabase
 import com.personalbookkeeping.database.dao.OptionDao
+import com.personalbookkeeping.database.dao.ManagementDao
 import com.personalbookkeeping.database.dao.SeedDao
 import com.personalbookkeeping.database.dao.TransactionDao
 import com.personalbookkeeping.database.entity.AccountBalanceView
@@ -33,6 +34,7 @@ abstract class AppDatabase : RoomDatabase() {
     abstract fun seedDao(): SeedDao
     abstract fun optionDao(): OptionDao
     abstract fun transactionDao(): TransactionDao
+    abstract fun managementDao(): ManagementDao
 
     companion object {
         private const val DATABASE_NAME = "personal-bookkeeping.db"

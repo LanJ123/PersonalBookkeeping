@@ -20,6 +20,10 @@ value class Money private constructor(val minorUnits: Long) {
         return "$sign¥$groupedWhole.${fraction.toString().padStart(2, '0')}"
     }
 
+    fun toPlainDecimal(): String = BigDecimal.valueOf(minorUnits, 2)
+        .stripTrailingZeros()
+        .toPlainString()
+
     companion object {
         fun fromMinor(minorUnits: Long): Money = Money(minorUnits)
 
@@ -45,6 +49,8 @@ object MoneyParser {
 
     private val validPattern = Regex("^\\d+(?:\\.\\d{1,2})?$")
     private val excessFractionPattern = Regex("^\\d+\\.\\d{3,}$")
+    private val signedPattern = Regex("^[+-]?\\d+(?:\\.\\d{1,2})?$")
+    private val signedExcessFractionPattern = Regex("^[+-]?\\d+\\.\\d{3,}$")
 
     fun parsePositive(raw: String): MoneyParseResult {
         val input = raw.trim()
@@ -79,4 +85,26 @@ object MoneyParser {
         return MoneyParseResult.Success(Money.fromMinor(minorUnits))
     }
 
+    fun parseSigned(raw: String): MoneyParseResult {
+        val input = raw.trim()
+        if (input.isEmpty()) return MoneyParseResult.Failure(MoneyParseFailure.EMPTY)
+        if (signedExcessFractionPattern.matches(input)) {
+            return MoneyParseResult.Failure(MoneyParseFailure.TOO_MANY_FRACTION_DIGITS)
+        }
+        if (!signedPattern.matches(input)) {
+            return MoneyParseResult.Failure(MoneyParseFailure.INVALID_FORMAT)
+        }
+        val minorUnits = try {
+            input.toBigDecimal()
+                .setScale(2, RoundingMode.UNNECESSARY)
+                .movePointRight(2)
+                .longValueExact()
+        } catch (_: ArithmeticException) {
+            return MoneyParseResult.Failure(MoneyParseFailure.ABOVE_MAXIMUM)
+        }
+        if (kotlin.math.abs(minorUnits) > MAX_MINOR_UNITS) {
+            return MoneyParseResult.Failure(MoneyParseFailure.ABOVE_MAXIMUM)
+        }
+        return MoneyParseResult.Success(Money.fromMinor(minorUnits))
+    }
 }

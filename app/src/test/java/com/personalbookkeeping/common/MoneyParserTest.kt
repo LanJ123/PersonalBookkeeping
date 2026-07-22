@@ -6,6 +6,19 @@ import org.junit.Test
 
 class MoneyParserTest {
     @Test
+    fun parsesSignedOpeningBalance() {
+        val result = MoneyParser.parseSigned("-1234.50")
+
+        assertEquals(Money.fromMinor(-123_450), (result as MoneyParseResult.Success).money)
+    }
+
+    @Test
+    fun signedOpeningBalanceAcceptsZero() {
+        val result = MoneyParser.parseSigned("0")
+
+        assertEquals(Money.fromMinor(0), (result as MoneyParseResult.Success).money)
+    }
+    @Test
     fun `parses integer and two decimal inputs into minor units`() {
         assertSuccess("25.50", 2_550)
         assertSuccess("25.5", 2_550)

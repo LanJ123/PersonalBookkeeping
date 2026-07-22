@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
     <string name="app_name">个人记账</string>
-    <string name="iteration_badge">I1 · 核心记账切片</string>
+    <string name="iteration_badge">I2 · 账户、分类与流水</string>
     <string name="transaction_editor_title">记一笔</string>
     <string name="transaction_type_expense">支出</string>
     <string name="transaction_type_income">收入</string>
