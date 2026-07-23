@@ -1,0 +1,97 @@
+<?xml version='1.0' encoding='UTF-8' ?>
+<testsuites tests="24" failures="0" errors="0" skipped="0" time="50.512" timestamp="2026-07-23T14:12:25" hostname="localhost">
+  <testsuite name="com.personalbookkeeping.database.AppDatabaseTest" tests="7" failures="0" errors="0" skipped="0" time="0.756" timestamp="2026-07-23T14:12:25" hostname="localhost">
+    <properties>
+      <property name="device" value="PBK_API_36(AVD) - 16" />
+      <property name="flavor" value="" />
+      <property name="project" value=":app" />
+    </properties>
+    <testcase name="databaseTriggerRejectsInvalidTransferShape" classname="com.personalbookkeeping.database.AppDatabaseTest" time="0.293" />
+    <testcase name="accountAndCategoryManagementEnforcesNamesLastActiveAndSorting" classname="com.personalbookkeeping.database.AppDatabaseTest" time="0.185" />
+    <testcase name="seedAndTransactionsProduceDerivedBalances" classname="com.personalbookkeeping.database.AppDatabaseTest" time="0.029" />
+    <testcase name="deactivatedItemsLeaveNewOptionsButRemainVisibleInHistory" classname="com.personalbookkeeping.database.AppDatabaseTest" time="0.058" />
+    <testcase name="pagingCombinesFiltersEscapesWildcardsAndMatchesTransferBothSides" classname="com.personalbookkeeping.database.AppDatabaseTest" time="0.054" />
+    <testcase name="monthlyInsightsReconcileAndBudgetsCountOnlyExpenses" classname="com.personalbookkeeping.database.AppDatabaseTest" time="0.108" />
+    <testcase name="editDeleteAndRestoreReplaceBalanceEffectExactlyOnce" classname="com.personalbookkeeping.database.AppDatabaseTest" time="0.029" />
+  </testsuite>
+  <testsuite name="com.personalbookkeeping.database.PortabilityServiceTest" tests="4" failures="0" errors="0" skipped="0" time="0.277" timestamp="2026-07-23T14:12:25" hostname="localhost">
+    <properties>
+      <property name="device" value="PBK_API_36(AVD) - 16" />
+      <property name="flavor" value="" />
+      <property name="project" value=":app" />
+    </properties>
+    <testcase name="injectedRestoreFailureLeavesOriginalDatabaseUnchanged" classname="com.personalbookkeeping.database.PortabilityServiceTest" time="0.161" />
+    <testcase name="backupClearRestoreRoundTripAndRollbackSnapshot" classname="com.personalbookkeeping.database.PortabilityServiceTest" time="0.055" />
+    <testcase name="displayPreferencesPersistAndAreObserved" classname="com.personalbookkeeping.database.PortabilityServiceTest" time="0.03" />
+    <testcase name="csvQueryUsesInclusiveDateRangeAndAscendingRows" classname="com.personalbookkeeping.database.PortabilityServiceTest" time="0.031" />
+  </testsuite>
+  <testsuite name="com.personalbookkeeping.ui.accessibility.LargeFontAccessibilityTest" tests="1" failures="0" errors="0" skipped="0" time="4.861" timestamp="2026-07-23T14:12:25" hostname="localhost">
+    <properties>
+      <property name="device" value="PBK_API_36(AVD) - 16" />
+      <property name="flavor" value="" />
+      <property name="project" value=":app" />
+    </properties>
+    <testcase name="dataTransferActionsRemainReachableAt320DpAnd130PercentFont" classname="com.personalbookkeeping.ui.accessibility.LargeFontAccessibilityTest" time="4.861" />
+  </testsuite>
+  <testsuite name="com.personalbookkeeping.ui.accessibility.MainNavigationAccessibilityTest" tests="1" failures="0" errors="0" skipped="0" time="3.869" timestamp="2026-07-23T14:12:25" hostname="localhost">
+    <properties>
+      <property name="device" value="PBK_API_36(AVD) - 16" />
+      <property name="flavor" value="" />
+      <property name="project" value=":app" />
+    </properties>
+    <testcase name="rootNavigationAndPrimaryActionHaveAccessibleTextAndActions" classname="com.personalbookkeeping.ui.accessibility.MainNavigationAccessibilityTest" time="3.869" />
+  </testsuite>
+  <testsuite name="com.personalbookkeeping.ui.insights.InsightsScreensTest" tests="2" failures="0" errors="0" skipped="0" time="5.379" timestamp="2026-07-23T14:12:25" hostname="localhost">
+    <properties>
+      <property name="device" value="PBK_API_36(AVD) - 16" />
+      <property name="flavor" value="" />
+      <property name="project" value=":app" />
+    </properties>
+    <testcase name="statisticsShowsRankingShareAndTrendAlternative" classname="com.personalbookkeeping.ui.insights.InsightsScreensTest" time="3.098" />
+    <testcase name="homeShowsEmptyStateAndExplicitBudgetWarning" classname="com.personalbookkeeping.ui.insights.InsightsScreensTest" time="2.281" />
+  </testsuite>
+  <testsuite name="com.personalbookkeeping.ui.ledger.LedgerScreenTest" tests="1" failures="0" errors="0" skipped="0" time="2.959" timestamp="2026-07-23T14:12:25" hostname="localhost">
+    <properties>
+      <property name="device" value="PBK_API_36(AVD) - 16" />
+      <property name="flavor" value="" />
+      <property name="project" value=":app" />
+    </properties>
+    <testcase name="filteredEmptyStateOffersClearAction" classname="com.personalbookkeeping.ui.ledger.LedgerScreenTest" time="2.959" />
+  </testsuite>
+  <testsuite name="com.personalbookkeeping.ui.privacy.PrivacyAndLockScreensTest" tests="2" failures="0" errors="0" skipped="0" time="4.543" timestamp="2026-07-23T14:12:25" hostname="localhost">
+    <properties>
+      <property name="device" value="PBK_API_36(AVD) - 16" />
+      <property name="flavor" value="" />
+      <property name="project" value=":app" />
+    </properties>
+    <testcase name="amountPrivacyDoesNotExposeRealAmountInSemantics" classname="com.personalbookkeeping.ui.privacy.PrivacyAndLockScreensTest" time="1.903" />
+    <testcase name="lockedScreenContainsNoBusinessContent" classname="com.personalbookkeeping.ui.privacy.PrivacyAndLockScreensTest" time="2.64" />
+  </testsuite>
+  <testsuite name="com.personalbookkeeping.ui.settings.MainActivitySafTest" tests="1" failures="0" errors="0" skipped="0" time="9.213" timestamp="2026-07-23T14:12:25" hostname="localhost">
+    <properties>
+      <property name="device" value="PBK_API_36(AVD) - 16" />
+      <property name="flavor" value="" />
+      <property name="project" value=":app" />
+    </properties>
+    <testcase name="createDocumentLauncherStartsAndCancellationReturnsWithoutCrash" classname="com.personalbookkeeping.ui.settings.MainActivitySafTest" time="9.213" />
+  </testsuite>
+  <testsuite name="com.personalbookkeeping.ui.settings.SettingsScreensTest" tests="4" failures="0" errors="0" skipped="0" time="13.056" timestamp="2026-07-23T14:12:25" hostname="localhost">
+    <properties>
+      <property name="device" value="PBK_API_36(AVD) - 16" />
+      <property name="flavor" value="" />
+      <property name="project" value=":app" />
+    </properties>
+    <testcase name="restoreReviewShowsCountsBeforeConfirmation" classname="com.personalbookkeeping.ui.settings.SettingsScreensTest" time="3.393" />
+    <testcase name="privacyScreenExposesAllThemeModesAndReportsSelection" classname="com.personalbookkeeping.ui.settings.SettingsScreensTest" time="3.016" />
+    <testcase name="privacyScreenShowsUnavailableAuthenticationFeedback" classname="com.personalbookkeeping.ui.settings.SettingsScreensTest" time="2.831" />
+    <testcase name="backupWarningDistinguishesUnencryptedBackupFromCsv" classname="com.personalbookkeeping.ui.settings.SettingsScreensTest" time="3.816" />
+  </testsuite>
+  <testsuite name="com.personalbookkeeping.ui.transaction.TransactionEditorScreenTest" tests="1" failures="0" errors="0" skipped="0" time="2.592" timestamp="2026-07-23T14:12:25" hostname="localhost">
+    <properties>
+      <property name="device" value="PBK_API_36(AVD) - 16" />
+      <property name="flavor" value="" />
+      <property name="project" value=":app" />
+    </properties>
+    <testcase name="initialScreenShowsEditorAndLoadingState" classname="com.personalbookkeeping.ui.transaction.TransactionEditorScreenTest" time="2.592" />
+  </testsuite>
+</testsuites>

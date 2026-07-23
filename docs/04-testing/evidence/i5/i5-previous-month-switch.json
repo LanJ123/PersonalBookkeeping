@@ -1,0 +1,8 @@
+{
+  "metric": "previous-month-switch",
+  "deviceRole": "emulator-trend-only",
+  "transactionCount": 10000,
+  "iterations": 5,
+  "medianMs": 794.673,
+  "samplesMs": [970.987, 794.673, 768.039, 759.938, 866.122]
+}

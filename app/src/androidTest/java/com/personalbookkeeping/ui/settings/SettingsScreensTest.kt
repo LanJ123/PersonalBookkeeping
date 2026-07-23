@@ -8,7 +8,9 @@ import androidx.compose.ui.test.onAllNodesWithText
 import androidx.compose.ui.test.performClick
 import com.personalbookkeeping.backup.BackupCounts
 import com.personalbookkeeping.backup.RestoreReview
+import com.personalbookkeeping.domain.model.ThemeMode
 import com.personalbookkeeping.ui.theme.BookkeepingTheme
+import org.junit.Assert.assertEquals
 import org.junit.Rule
 import org.junit.Test
 
@@ -62,15 +64,41 @@ class SettingsScreensTest {
             BookkeepingTheme {
                 PrivacySettingsScreen(
                     amountsHidden = false,
+                    themeMode = ThemeMode.SYSTEM,
                     appLockEnabled = false,
                     appLockMessage = "设备尚未配置可用的屏幕锁或生物识别",
                     onBack = {},
                     onAmountsHiddenChanged = {},
+                    onThemeModeChanged = {},
                     onAppLockChanged = {},
                 )
             }
         }
 
         composeRule.onNodeWithText("设备尚未配置可用的屏幕锁或生物识别").assertIsDisplayed()
+    }
+
+    @Test
+    fun privacyScreenExposesAllThemeModesAndReportsSelection() {
+        var selected: ThemeMode? = null
+        composeRule.setContent {
+            BookkeepingTheme {
+                PrivacySettingsScreen(
+                    amountsHidden = false,
+                    themeMode = ThemeMode.SYSTEM,
+                    appLockEnabled = false,
+                    appLockMessage = null,
+                    onBack = {},
+                    onAmountsHiddenChanged = {},
+                    onThemeModeChanged = { selected = it },
+                    onAppLockChanged = {},
+                )
+            }
+        }
+
+        composeRule.onNodeWithText("跟随系统").assertIsDisplayed()
+        composeRule.onNodeWithText("浅色").assertIsDisplayed()
+        composeRule.onNodeWithText("深色").performClick()
+        composeRule.runOnIdle { assertEquals(ThemeMode.DARK, selected) }
     }
 }

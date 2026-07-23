@@ -1,7 +1,7 @@
 # 构建与运行说明
 
-> 版本：v1.0  
-> 更新日期：2026-07-22
+> 版本：v1.1
+> 更新日期：2026-07-23
 
 ## 1. 工程基线
 
@@ -28,6 +28,17 @@
 .\gradlew.bat :app:lintDebug
 .\gradlew.bat :app:assembleRelease
 ```
+
+I5 完整工程门与性能任务：
+
+```powershell
+.\gradlew.bat :app:testDebugUnitTest :app:verifyCoreCoverage :app:coreCoverageReport
+.\gradlew.bat :app:connectedDebugAndroidTest
+.\gradlew.bat :app:assembleRelease :app:bundleRelease :benchmark:assembleBenchmark
+.\gradlew.bat :benchmark:connectedBenchmarkAndroidTest "-Pandroid.testInstrumentationRunnerArguments.class=com.personalbookkeeping.benchmark.StartupBenchmark,com.personalbookkeeping.benchmark.LedgerBenchmark"
+```
+
+性能结果位于 `benchmark/build/outputs/connected_android_test_additional_output/`。模拟器结果只作趋势；正式 P95 必须在目标真机复跑。
 
 安装到已启动模拟器：
 

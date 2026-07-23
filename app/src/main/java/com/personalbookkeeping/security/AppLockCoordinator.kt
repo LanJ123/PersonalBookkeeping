@@ -26,7 +26,7 @@ data class AppLockState(
 )
 
 class AppLockCoordinator(
-    private val repository: SecuritySettingsRepository,
+    private val repository: AppLockSettingsStore,
     private val clock: MonotonicClock = SystemMonotonicClock,
     scope: CoroutineScope,
 ) {

@@ -16,6 +16,7 @@ import com.personalbookkeeping.database.entity.CategoryEntity
 import com.personalbookkeeping.database.entity.LedgerEntity
 import com.personalbookkeeping.database.entity.TransactionEntity
 import com.personalbookkeeping.domain.model.AccountType
+import com.personalbookkeeping.domain.model.ThemeMode
 import com.personalbookkeeping.domain.usecase.CreateTransactionUseCase
 import com.personalbookkeeping.export.CsvExportResult
 import com.personalbookkeeping.export.CsvExporter
@@ -45,10 +46,19 @@ class PortabilityService(
     private var pendingRestore: Pair<String, ValidatedBackup>? = null
 
     val hideAmounts: Flow<Boolean> = dao.observePreferences().filterNotNull().map { it.hideAmounts }
+    val themeMode: Flow<ThemeMode> = dao.observePreferences()
+        .filterNotNull()
+        .map { ThemeMode.fromStorage(it.themeMode) }
 
     suspend fun setHideAmounts(hidden: Boolean) {
         mutationMutex.withLock {
             check(dao.setHideAmounts(hidden, clock.now().toEpochMilli()) == 1)
+        }
+    }
+
+    suspend fun setThemeMode(themeMode: ThemeMode) {
+        mutationMutex.withLock {
+            check(dao.setThemeMode(themeMode.name, clock.now().toEpochMilli()) == 1)
         }
     }
 

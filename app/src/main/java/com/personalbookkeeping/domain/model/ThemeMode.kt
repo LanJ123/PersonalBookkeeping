@@ -1,0 +1,13 @@
+package com.personalbookkeeping.domain.model
+
+enum class ThemeMode {
+    SYSTEM,
+    LIGHT,
+    DARK,
+    ;
+
+    companion object {
+        fun fromStorage(value: String): ThemeMode =
+            entries.firstOrNull { it.name == value } ?: SYSTEM
+    }
+}

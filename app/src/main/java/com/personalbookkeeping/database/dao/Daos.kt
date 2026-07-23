@@ -532,6 +532,9 @@ interface PortabilityDao {
     @Query("UPDATE app_preferences SET hide_amounts = :hidden, updated_at_ms = :updatedAtMs")
     suspend fun setHideAmounts(hidden: Boolean, updatedAtMs: Long): Int
 
+    @Query("UPDATE app_preferences SET theme_mode = :themeMode, updated_at_ms = :updatedAtMs")
+    suspend fun setThemeMode(themeMode: String, updatedAtMs: Long): Int
+
     @Transaction
     suspend fun snapshot(): PortableSnapshotRows {
         val ledger = requireNotNull(getLedger())

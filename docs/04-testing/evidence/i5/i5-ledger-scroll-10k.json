@@ -1,0 +1,8 @@
+{
+  "metric": "ledger-scroll-10k",
+  "deviceRole": "emulator-trend-only",
+  "transactionCount": 10000,
+  "iterations": 5,
+  "medianMs": 6964.417,
+  "samplesMs": [6964.417, 7659.051, 7068.723, 6951.984, 6732.066]
+}

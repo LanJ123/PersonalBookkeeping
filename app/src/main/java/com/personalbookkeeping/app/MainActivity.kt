@@ -5,15 +5,18 @@ import android.content.Context
 import android.os.Bundle
 import android.os.Build
 import android.view.WindowManager
+import androidx.activity.compose.ReportDrawnWhen
 import androidx.activity.compose.setContent
 import androidx.biometric.BiometricManager
 import androidx.biometric.BiometricPrompt
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.core.content.ContextCompat
 import androidx.fragment.app.FragmentActivity
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.lifecycleScope
 import com.personalbookkeeping.security.AppLockCoordinator
+import com.personalbookkeeping.domain.model.ThemeMode
 import com.personalbookkeeping.ui.navigation.BookkeepingApp
 import com.personalbookkeeping.ui.privacy.AmountPrivacyProvider
 import com.personalbookkeeping.ui.security.LockedScreen
@@ -29,6 +32,14 @@ class MainActivity : FragmentActivity() {
             val lockState = container.appLockCoordinator.state.collectAsStateWithLifecycle().value
             val amountsHidden = container.portabilityService.hideAmounts
                 .collectAsStateWithLifecycle(initialValue = false).value
+            val themeMode = container.portabilityService.themeMode
+                .collectAsStateWithLifecycle(initialValue = ThemeMode.SYSTEM).value
+            val darkTheme = when (themeMode) {
+                ThemeMode.SYSTEM -> isSystemInDarkTheme()
+                ThemeMode.LIGHT -> false
+                ThemeMode.DARK -> true
+            }
+            ReportDrawnWhen { lockState.ready }
             LaunchedEffect(lockState.enabled) {
                 if (lockState.enabled) {
                     window.addFlags(WindowManager.LayoutParams.FLAG_SECURE)
@@ -36,7 +47,7 @@ class MainActivity : FragmentActivity() {
                     window.clearFlags(WindowManager.LayoutParams.FLAG_SECURE)
                 }
             }
-            BookkeepingTheme {
+            BookkeepingTheme(darkTheme = darkTheme) {
                 when {
                     !lockState.ready -> LockedScreen(ready = false, message = null, onUnlock = {})
                     lockState.locked -> LockedScreen(
@@ -50,6 +61,7 @@ class MainActivity : FragmentActivity() {
                             appLockEnabled = lockState.enabled,
                             appLockMessage = lockState.message,
                             amountsHidden = amountsHidden,
+                            themeMode = themeMode,
                             onAppLockChanged = ::requestAppLockChange,
                         )
                     }

@@ -4,8 +4,10 @@ import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.Button
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.FloatingActionButton
@@ -21,6 +23,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.semantics.clearAndSetSemantics
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
@@ -30,6 +33,7 @@ import androidx.navigation3.runtime.rememberNavBackStack
 import androidx.navigation3.ui.NavDisplay
 import androidx.paging.compose.collectAsLazyPagingItems
 import com.personalbookkeeping.app.AppContainer
+import com.personalbookkeeping.domain.model.ThemeMode
 import com.personalbookkeeping.ui.ledger.LedgerScreen
 import com.personalbookkeeping.ui.ledger.LedgerViewModel
 import com.personalbookkeeping.ui.ledger.LedgerViewModelFactory
@@ -85,6 +89,7 @@ fun BookkeepingApp(
     appLockEnabled: Boolean,
     appLockMessage: String?,
     amountsHidden: Boolean,
+    themeMode: ThemeMode,
     onAppLockChanged: (Boolean) -> Unit,
 ) {
     val backStack = rememberNavBackStack(HomeKey)
@@ -128,7 +133,7 @@ fun BookkeepingApp(
                     NavigationBarItem(
                         selected = current == tab.key,
                         onClick = { switchRoot(tab.key) },
-                        icon = { Text(tab.glyph) },
+                        icon = { Text(tab.glyph, Modifier.clearAndSetSemantics { }) },
                         label = { Text(tab.label) },
                     )
                 }
@@ -212,10 +217,12 @@ fun BookkeepingApp(
                     PrivacyKey -> NavEntry(key) {
                         PrivacySettingsScreen(
                             amountsHidden = amountsHidden,
+                            themeMode = themeMode,
                             appLockEnabled = appLockEnabled,
                             appLockMessage = appLockMessage,
                             onBack = { backStack.removeLastOrNull() },
                             onAmountsHiddenChanged = settingsViewModel::setHideAmounts,
+                            onThemeModeChanged = settingsViewModel::setThemeMode,
                             onAppLockChanged = onAppLockChanged,
                         )
                     }
@@ -311,14 +318,14 @@ private fun SettingsScreen(
     Column(Modifier.fillMaxSize()) {
         TopAppBar(title = { Text("设置") })
         Column(
-            Modifier.fillMaxSize().padding(20.dp),
+            Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(20.dp),
             verticalArrangement = Arrangement.spacedBy(12.dp),
         ) {
-            Button(onClick = onAccounts, modifier = Modifier.fillMaxWidth().height(64.dp)) { Text("账户管理") }
-            Button(onClick = onCategories, modifier = Modifier.fillMaxWidth().height(64.dp)) { Text("分类管理") }
-            Button(onClick = onBudgets, modifier = Modifier.fillMaxWidth().height(64.dp)) { Text("预算管理") }
-            Button(onClick = onDataTransfer, modifier = Modifier.fillMaxWidth().height(64.dp)) { Text("数据与备份") }
-            Button(onClick = onPrivacy, modifier = Modifier.fillMaxWidth().height(64.dp)) { Text("隐私与安全") }
+            Button(onClick = onAccounts, modifier = Modifier.fillMaxWidth().heightIn(min = 64.dp)) { Text("账户管理") }
+            Button(onClick = onCategories, modifier = Modifier.fillMaxWidth().heightIn(min = 64.dp)) { Text("分类管理") }
+            Button(onClick = onBudgets, modifier = Modifier.fillMaxWidth().heightIn(min = 64.dp)) { Text("预算管理") }
+            Button(onClick = onDataTransfer, modifier = Modifier.fillMaxWidth().heightIn(min = 64.dp)) { Text("数据与备份") }
+            Button(onClick = onPrivacy, modifier = Modifier.fillMaxWidth().heightIn(min = 64.dp)) { Text("隐私与安全") }
             Text("数据仅保存在本机，不会自动上传。", color = MaterialTheme.colorScheme.onSurfaceVariant)
         }
     }

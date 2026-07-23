@@ -1,0 +1,31 @@
+# 1.0.0-rc1 候选产物清单
+
+> 生成日期：2026-07-23
+> 说明：构建二进制不提交 Git；以下路径均为仓库本地构建输出。
+
+| 产物 | 大小（字节） | SHA-256 | 身份 |
+|---|---:|---|---|
+| `app/build/outputs/apk/debug/app-debug.apk` | 37,313,849 | `2B23764C5AFBD771A060CB813C6C73F7F08300E8D8ADB7F8ADF8623FD1394731` | Debug 签名，仅开发 |
+| `app/build/outputs/apk/release/app-release-unsigned.apk` | 4,059,707 | `7B016E38AFA6D4DADD5412387B716A2671DFCC99FA0360330132D0992684AA70` | 未签名，正式签名输入 |
+| `app/build/outputs/bundle/release/app-release.aab` | 5,304,485 | `2BD608ED3C5B3399ED6E2B8BD5DD8837FB1143868B2BE2B90801829EF48EC296` | 未配置正式签名 |
+| `app/build/outputs/mapping/release/mapping.txt` | 42,168,231 | `A144A9EB1692AC2398C71E62DE6FE061F625A221568925AD1B704322E2833D2A` | R8 mapping，需与版本一起保管 |
+| `app/build/outputs/apk/benchmark/app-benchmark.apk` | 4,072,083 | `77E1888F7A6BBAA3743C746D2C6074470851CD444B4B80C90FCAC2A67CA22CB3` | Android Debug v2 签名，仅性能测试 |
+| `benchmark/build/outputs/apk/benchmark/benchmark-benchmark.apk` | 46,510,772 | `AAF5DDC03BD2D0E2259EF8CE6EE8DCA7C7106D948BF966644C830679BCE7D2CB` | Android Debug v2 签名，仅测试驱动 |
+
+两个 benchmark APK 的证书 SHA-256 均为：
+
+`220448C35779671EDD13299A4CCD884A30268709C25D1C7580CF5D8BC2BFF475`
+
+Release APK 经 `apksigner verify` 确认为未签名，符合当前阶段设计。正式签名后必须新增最终产物记录，不能覆盖本清单。
+
+## 证据摘要
+
+| 文件 | SHA-256 |
+|---|---|
+| `api28-instrumented.xml` | `C85BE5B299B33CF1FC1D00FAC5BD0CA79DBACA26F40F7B56DA6677D109FF10F9` |
+| `api36-instrumented.xml` | `46DAC99ECA59A1B3160AFFE921E3151737B3DE2299538F9FFD2E30966F1BD0BF` |
+| `core-coverage.xml` | `FB97C5A2EA9755ABF04A2BB7C1FF918E80CC79EDD6125017F8AE4BD5B1F10263` |
+| `lint-results-debug.xml` | `0299196C258BDECAFE8AC2A6836CC8E1DF1D0F0C0D29242467E8056DB07A89AB` |
+| `i5-ledger-scroll-10k.json` | `58D1C3F4348D04C82C753AB19911E5A8F5D57964CE9FB5853C4943AE4388F393` |
+| `i5-previous-month-switch.json` | `D0B7F196F8AF168D3C562E21B89448B4E80BC6735108EE569BA4F99B73E6DA57` |
+| `startup-benchmark-data.json` | `4D71268AD08A37BD5CCCE2E65CBDF720566F2441EF0751C7F5BF862FAEA7E604` |

@@ -16,3 +16,4 @@ dependencyResolutionManagement {
 
 rootProject.name = "PersonalBookkeeping"
 include(":app")
+include(":benchmark")

@@ -1,12 +1,12 @@
 # 项目文档索引
 
-> 文档版本：v2.5；更新时间：2026-07-23；阶段：第 4 阶段迭代实现（I0～I4 已通过，等待 I5 授权）。
+> 文档版本：v3.0；更新时间：2026-07-23；阶段：第 4 阶段迭代实现（I0～I5 本地工程工作完成，外部发布门待验证）。
 
 ## 00 项目管理
 
 | 文档 | 用途 | 状态 |
 |---|---|---|
-| [开发流程与阶段门](00-project/01-development-process.md) | 定义每阶段活动、产物与进入/退出条件 | 第 4 阶段；I4 已通过 |
+| [开发流程与阶段门](00-project/01-development-process.md) | 定义每阶段活动、产物与进入/退出条件 | 第 4 阶段；I5 工程硬化完成 |
 | [决策日志](00-project/02-decision-log.md) | 保存关键产品和技术决策 | 持续更新 |
 | [变更记录](00-project/03-change-log.md) | 保存基线后的正式变更及影响分析 | 持续更新 |
 
@@ -65,7 +65,7 @@
 |---|---|---|
 | [Windows Android 开发环境准备指南](03-implementation/01-environment-setup-windows.md) | 记录当前环境审计、安装步骤和验收命令 | v0.1 已完成 |
 | [Windows Android 开发环境验收报告](03-implementation/02-environment-verification.md) | 保存实际安装版本、AVD 配置与剩余验证项 | v1.1；必需环境通过 |
-| [迭代实现计划](03-implementation/03-iteration-plan.md) | 定义垂直切片、验收门槛和交付顺序 | v1.3；I4 已通过 |
+| [迭代实现计划](03-implementation/03-iteration-plan.md) | 定义垂直切片、验收门槛和交付顺序 | v1.4；I5 工程硬化完成 |
 | [编码规范](03-implementation/04-coding-standards.md) | 统一 Kotlin、Compose、Room、隐私和测试约束 | v1.0；已生效 |
 | [构建与运行说明](03-implementation/05-build-and-run.md) | 保存本机构建、测试、安装和排错命令 | v1.0；持续更新 |
 | [实现日志](03-implementation/06-implementation-log.md) | 逐次保存代码产物、验证结果和遗留事项 | 持续更新 |
@@ -75,6 +75,8 @@
 | [I3 实现日志](03-implementation/10-i3-implementation-log.md) | 保存 I3 代码、测试和问题处理记录 | v1.0；已完成 |
 | [I4 详细设计](03-implementation/11-i4-detailed-design.md) | 固化备份恢复、CSV、金额隐私与应用锁契约 | v1.0；已实施 |
 | [I4 实现日志](03-implementation/12-i4-implementation-log.md) | 保存 I4 代码、测试和问题处理记录 | v1.0；已完成 |
+| [I5 详细设计](03-implementation/13-i5-detailed-design.md) | 固化性能、可访问性、构建和发布候选边界 | v1.0；已实施 |
+| [I5 实现日志](03-implementation/14-i5-implementation-log.md) | 保存 I5 代码、测试和外部门禁 | v1.0；工程硬化完成 |
 
 ## 04 测试
 
@@ -95,13 +97,25 @@
 | [I4 API 36 备份成功截图](04-testing/evidence/2026-07-23-i4-api36-backup-success.png) | 保存真实 SAF 创建 `.pbk` 的视觉证据 | 已归档 |
 | [I4 API 36 金额遮罩截图](04-testing/evidence/2026-07-23-i4-api36-hidden-amounts.png) | 保存全局金额遮罩视觉证据 | 已归档 |
 | [I4 API 36 实际备份](04-testing/evidence/2026-07-23-i4-api36-smoke.pbk) | 保存可独立校验的真实 `.pbk` 冒烟产物 | 已归档 |
+| [I5 测试用例](04-testing/09-i5-test-cases.md) | 定义性能、可访问性、兼容性和候选审计 | v1.0；已执行 |
+| [I5 测试报告](04-testing/10-i5-test-report.md) | 保存 API 28/36、覆盖率、性能和发布门结论 | v1.0；本地门禁通过 |
+
+## 05 发布候选
+
+| 文档 | 用途 | 状态 |
+|---|---|---|
+| [发布检查清单](05-release/01-release-checklist.md) | 区分已完成工程门与正式发布门 | 外部发布门待完成 |
+| [1.0.0-rc1 版本说明](05-release/02-release-notes-1.0.0-rc1.md) | 说明候选功能与身份 | 已完成 |
+| [用户手册](05-release/03-user-guide.md) | 说明记账、统计、备份和安全操作 | 已完成 |
+| [已知限制](05-release/04-known-limitations.md) | 记录产品与验证边界 | 已完成 |
+| [候选产物清单](05-release/05-candidate-artifact-manifest.md) | 保存构建产物身份、大小和 SHA-256 | 已完成 |
 
 ## 后续阶段预留目录
 
 - `docs/02-design/ui/` 后续按实现需要补充视觉 token。
 - `docs/03-implementation/` 持续补充迭代结果、构建记录和代码变更。
 - `docs/04-testing/` 后续按迭代补充测试用例、报告与缺陷记录。
-- `docs/05-release/`：发布清单、APK 校验信息、版本说明、用户手册。
+- `docs/05-release/`：继续补充正式签名与真机门禁结果。
 - `docs/06-maintenance/`：变更请求、问题复盘、版本路线图。
 
 所有需求变更先更新 PRD、决策日志和追踪矩阵，再进入实现。

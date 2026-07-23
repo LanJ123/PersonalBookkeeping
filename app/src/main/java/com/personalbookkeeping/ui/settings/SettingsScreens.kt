@@ -10,10 +10,13 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.FilterChip
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.OutlinedTextField
@@ -31,6 +34,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import java.time.LocalDate
 import java.time.format.DateTimeFormatter
+import com.personalbookkeeping.domain.model.ThemeMode
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -72,7 +76,7 @@ fun DataTransferScreen(
             navigationIcon = { TextButton(onClick = onBack) { Text("返回") } },
         )
         Column(
-            Modifier.fillMaxSize().padding(20.dp),
+            Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(20.dp),
             verticalArrangement = Arrangement.spacedBy(14.dp),
         ) {
             Text("完整备份", style = MaterialTheme.typography.titleMedium)
@@ -92,9 +96,21 @@ fun DataTransferScreen(
 
             Text("CSV 导出", style = MaterialTheme.typography.titleMedium, modifier = Modifier.padding(top = 8.dp))
             Text("CSV 仅用于查看和分析，不能用于完整恢复。", color = MaterialTheme.colorScheme.onSurfaceVariant)
-            Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
-                OutlinedTextField(fromText, { fromText = it }, label = { Text("开始日期") }, modifier = Modifier.weight(1f))
-                OutlinedTextField(toText, { toText = it }, label = { Text("结束日期") }, modifier = Modifier.weight(1f))
+            Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
+                OutlinedTextField(
+                    fromText,
+                    { fromText = it },
+                    label = { Text("开始日期") },
+                    modifier = Modifier.fillMaxWidth(),
+                    singleLine = true,
+                )
+                OutlinedTextField(
+                    toText,
+                    { toText = it },
+                    label = { Text("结束日期") },
+                    modifier = Modifier.fillMaxWidth(),
+                    singleLine = true,
+                )
             }
             Button(
                 onClick = {
@@ -152,10 +168,12 @@ fun DataTransferScreen(
 @Composable
 fun PrivacySettingsScreen(
     amountsHidden: Boolean,
+    themeMode: ThemeMode,
     appLockEnabled: Boolean,
     appLockMessage: String?,
     onBack: () -> Unit,
     onAmountsHiddenChanged: (Boolean) -> Unit,
+    onThemeModeChanged: (ThemeMode) -> Unit,
     onAppLockChanged: (Boolean) -> Unit,
 ) {
     Column(Modifier.fillMaxSize()) {
@@ -164,9 +182,30 @@ fun PrivacySettingsScreen(
             navigationIcon = { TextButton(onClick = onBack) { Text("返回") } },
         )
         Column(
-            Modifier.fillMaxSize().padding(20.dp),
+            Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(20.dp),
             verticalArrangement = Arrangement.spacedBy(20.dp),
         ) {
+            Text("主题", style = MaterialTheme.typography.titleMedium)
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.spacedBy(8.dp),
+            ) {
+                ThemeMode.entries.forEach { mode ->
+                    FilterChip(
+                        selected = themeMode == mode,
+                        onClick = { onThemeModeChanged(mode) },
+                        label = {
+                            Text(
+                                when (mode) {
+                                    ThemeMode.SYSTEM -> "跟随系统"
+                                    ThemeMode.LIGHT -> "浅色"
+                                    ThemeMode.DARK -> "深色"
+                                },
+                            )
+                        },
+                    )
+                }
+            }
             SettingSwitchRow(
                 title = "隐藏金额",
                 description = "首页、流水、统计、预算和账户中的只读金额显示为 ••••",

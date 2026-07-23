@@ -7,6 +7,7 @@ import androidx.lifecycle.viewModelScope
 import com.personalbookkeeping.backup.BackupFormatException
 import com.personalbookkeeping.backup.PortabilityService
 import com.personalbookkeeping.backup.RestoreReview
+import com.personalbookkeeping.domain.model.ThemeMode
 import java.time.LocalDate
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -74,6 +75,16 @@ class SettingsViewModel(private val service: PortabilityService) : ViewModel() {
                 service.setHideAmounts(hidden)
             } catch (_: Exception) {
                 mutableState.update { it.copy(message = "金额隐私设置保存失败") }
+            }
+        }
+    }
+
+    fun setThemeMode(themeMode: ThemeMode) {
+        viewModelScope.launch {
+            try {
+                service.setThemeMode(themeMode)
+            } catch (_: Exception) {
+                mutableState.update { it.copy(message = "主题设置保存失败") }
             }
         }
     }

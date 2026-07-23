@@ -7,11 +7,13 @@ import com.personalbookkeeping.backup.PortabilityService
 import com.personalbookkeeping.common.AppClock
 import com.personalbookkeeping.database.entity.TransactionEntity
 import com.personalbookkeeping.database.seed.InitialDataSeeder
+import com.personalbookkeeping.domain.model.ThemeMode
 import com.personalbookkeeping.domain.usecase.CreateTransactionUseCase
 import java.io.ByteArrayInputStream
 import java.io.ByteArrayOutputStream
 import java.time.Instant
 import java.time.LocalDate
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.runBlocking
 import org.junit.After
 import org.junit.Assert.assertEquals
@@ -99,6 +101,19 @@ class PortabilityServiceTest {
 
         assertEquals(listOf(4_250L, 500L), selected.map { it.amountMinor })
         assertEquals(0, previous.size)
+    }
+
+    @Test
+    fun displayPreferencesPersistAndAreObserved() = runBlocking {
+        InitialDataSeeder(database, AppClock { NOW }).seedIfNeeded()
+        val service = PortabilityService(context, database, AppClock { NOW })
+
+        service.setThemeMode(ThemeMode.DARK)
+        service.setHideAmounts(true)
+
+        assertEquals(ThemeMode.DARK, service.themeMode.first())
+        assertEquals(true, service.hideAmounts.first())
+        assertEquals("DARK", database.portabilityDao().getPreferences()?.themeMode)
     }
 
     private suspend fun seedWithTransaction() {

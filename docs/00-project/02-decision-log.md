@@ -34,5 +34,6 @@
 | DEC-030 | 2026-07-23 | 账户类型统一为备份 Schema 的六种规范值，并兼容读取旧开发值 | 已接受（兼容修正） | 新写入和备份使用 `CASH/BANK/E_WALLET/STORED_VALUE/CREDIT_CARD/OTHER`；旧 `CREDIT` 映射为 `CREDIT_CARD`、旧 `INVESTMENT` 映射为 `OTHER`，不变更 Room schema v1 |
 | DEC-031 | 2026-07-23 | 显式固定 AndroidX Fragment 1.8.9，并将真实 SAF 启动纳入回归 | 已接受（缺陷修复） | Biometric 1.1.0 的传递依赖 Fragment 1.2.5 会拒绝现代 Activity Result 请求码；API 36 冒烟复现后升级到官方稳定版，避免创建/打开文档时崩溃 |
 | DEC-032 | 2026-07-23 | I4 满足退出条件，I5 需另行确认后开始 | 已接受（阶段门结论） | JVM 33/33、API 28/36 各 20/20、Debug/Release、Lint、依赖、权限、备份和 schema 审计均通过；API 37 仍按 DEC-018 可选 |
+| DEC-033 | 2026-07-23 | 批准进入 I5：性能、无障碍、兼容性和发布候选硬化 | 已接受 | 用户明确授权；本机先完成 Release/R8、Macrobenchmark、1 万笔数据、API 28/36、无障碍与发布审计，真机性能、ROM 行为和正式签名仍须在目标设备/密钥就绪后闭环 |
 
 状态说明：需求基线中的决定均已由用户于 2026-07-21 确认。后续若被替代，保留原记录并注明替代决策。

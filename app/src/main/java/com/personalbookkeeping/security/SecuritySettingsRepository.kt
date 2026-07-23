@@ -18,10 +18,15 @@ data class SecuritySettings(
     val backgroundTimeoutSeconds: Int,
 )
 
-class SecuritySettingsRepository(context: Context) {
+interface AppLockSettingsStore {
+    val settings: Flow<SecuritySettings>
+    suspend fun setAppLockEnabled(enabled: Boolean)
+}
+
+class SecuritySettingsRepository(context: Context) : AppLockSettingsStore {
     private val dataStore = context.applicationContext.securityDataStore
 
-    val settings: Flow<SecuritySettings> = dataStore.data
+    override val settings: Flow<SecuritySettings> = dataStore.data
         .catch { error ->
             if (error is IOException) emit(emptyPreferences()) else throw error
         }
@@ -32,7 +37,7 @@ class SecuritySettingsRepository(context: Context) {
             )
         }
 
-    suspend fun setAppLockEnabled(enabled: Boolean) {
+    override suspend fun setAppLockEnabled(enabled: Boolean) {
         dataStore.edit { preferences ->
             preferences[APP_LOCK_ENABLED] = enabled
             preferences[BACKGROUND_TIMEOUT_SECONDS] = DEFAULT_TIMEOUT_SECONDS
