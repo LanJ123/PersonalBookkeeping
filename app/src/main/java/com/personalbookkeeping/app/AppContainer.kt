@@ -14,10 +14,17 @@ import com.personalbookkeeping.domain.repository.ManagementRepository
 import com.personalbookkeeping.domain.repository.InsightsRepository
 import com.personalbookkeeping.domain.usecase.CreateTransactionUseCase
 import com.personalbookkeeping.domain.usecase.UpdateTransactionUseCase
+import com.personalbookkeeping.backup.PortabilityService
+import com.personalbookkeeping.security.AppLockCoordinator
+import com.personalbookkeeping.security.SecuritySettingsRepository
 import java.time.ZoneId
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.SupervisorJob
 
 class AppContainer(context: Context) {
     private val database = AppDatabase.build(context.applicationContext)
+    private val applicationScope = CoroutineScope(SupervisorJob() + Dispatchers.Main.immediate)
     private val initialDataSeeder = InitialDataSeeder(database, SystemAppClock)
 
     private val offlineTransactionRepository = OfflineTransactionRepository(
@@ -35,6 +42,15 @@ class AppContainer(context: Context) {
         database = database,
         clock = SystemAppClock,
         idGenerator = UuidGenerator,
+    )
+    val portabilityService = PortabilityService(
+        context = context.applicationContext,
+        database = database,
+        clock = SystemAppClock,
+    )
+    val appLockCoordinator = AppLockCoordinator(
+        repository = SecuritySettingsRepository(context.applicationContext),
+        scope = applicationScope,
     )
 
     val createTransactionUseCase = CreateTransactionUseCase(

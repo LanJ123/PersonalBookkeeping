@@ -41,6 +41,7 @@ import com.personalbookkeeping.domain.model.ItemStatus
 import com.personalbookkeeping.domain.model.ManagedAccount
 import com.personalbookkeeping.domain.model.ManagedCategory
 import com.personalbookkeeping.domain.model.MoveDirection
+import com.personalbookkeeping.ui.privacy.displayCny
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -95,9 +96,9 @@ private fun AccountCard(
         Column(Modifier.padding(14.dp), verticalArrangement = Arrangement.spacedBy(5.dp)) {
             Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
                 Text(account.name, fontWeight = FontWeight.SemiBold)
-                Text(account.balance.formatCny(), fontWeight = FontWeight.SemiBold)
+                Text(account.balance.displayCny(), fontWeight = FontWeight.SemiBold)
             }
-            Text("${account.type.label()} · 期初 ${account.openingBalance.formatCny()} · ${account.transactionCount} 笔流水", style = MaterialTheme.typography.bodySmall)
+            Text("${account.type.label()} · 期初 ${account.openingBalance.displayCny()} · ${account.transactionCount} 笔流水", style = MaterialTheme.typography.bodySmall)
             if (account.status == ItemStatus.INACTIVE) {
                 Text("已停用（历史流水保留）", color = MaterialTheme.colorScheme.onSurfaceVariant)
             } else {
@@ -240,7 +241,8 @@ private fun MessageEffect(state: ManagementUiState, host: SnackbarHostState, onC
 private fun AccountType.label(): String = when (this) {
     AccountType.CASH -> "现金"
     AccountType.BANK -> "银行"
-    AccountType.CREDIT -> "信用"
-    AccountType.INVESTMENT -> "投资"
+    AccountType.E_WALLET -> "电子钱包"
+    AccountType.STORED_VALUE -> "储值卡"
+    AccountType.CREDIT_CARD -> "信用卡"
     AccountType.OTHER -> "其他"
 }

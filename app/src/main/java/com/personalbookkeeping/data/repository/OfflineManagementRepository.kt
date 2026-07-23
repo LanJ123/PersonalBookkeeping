@@ -36,7 +36,7 @@ class OfflineManagementRepository(
                 ManagedAccount(
                     id = it.id,
                     name = it.name,
-                    type = AccountType.valueOf(it.type),
+                    type = AccountType.fromStoredValue(it.type),
                     openingBalance = Money.fromMinor(it.openingBalanceMinor),
                     balance = Money.fromMinor(it.balanceMinor),
                     includeInAssets = it.includeInAssets,

@@ -1,0 +1,71 @@
+{
+  "schemaVersion": 1,
+  "ledger": {
+    "id": "ledger-default",
+    "name": "个人账本",
+    "currencyCode": "CNY",
+    "monthStartDay": 1,
+    "createdAt": "2026-07-23T00:00:00Z",
+    "updatedAt": "2026-07-23T00:00:00Z"
+  },
+  "accounts": [
+    {
+      "id": "account-cash",
+      "name": "现金",
+      "type": "CASH",
+      "openingBalanceMinor": 10000,
+      "includeInAssets": true,
+      "status": "ACTIVE",
+      "sortOrder": 0,
+      "createdAt": "2026-07-23T00:00:00Z",
+      "updatedAt": "2026-07-23T00:00:00Z"
+    }
+  ],
+  "categories": [
+    {
+      "id": "category-food",
+      "kind": "EXPENSE",
+      "name": "餐饮",
+      "iconKey": "food",
+      "colorKey": "ORANGE",
+      "status": "ACTIVE",
+      "sortOrder": 0,
+      "createdAt": "2026-07-23T00:00:00Z",
+      "updatedAt": "2026-07-23T00:00:00Z"
+    }
+  ],
+  "transactions": [
+    {
+      "id": "transaction-lunch",
+      "type": "EXPENSE",
+      "amountMinor": 2350,
+      "categoryId": "category-food",
+      "accountId": "account-cash",
+      "targetAccountId": null,
+      "occurredAt": "2026-07-23T04:30:00Z",
+      "zoneId": "Asia/Shanghai",
+      "localDate": "2026-07-23",
+      "note": "午餐,含饮料",
+      "createdAt": "2026-07-23T04:30:00Z",
+      "updatedAt": "2026-07-23T04:30:00Z"
+    }
+  ],
+  "budgets": [
+    {
+      "id": "budget-food",
+      "periodKey": "2026-07",
+      "scopeKey": "CATEGORY:category-food",
+      "categoryId": "category-food",
+      "amountMinor": 100000,
+      "createdAt": "2026-07-23T00:00:00Z",
+      "updatedAt": "2026-07-23T00:00:00Z"
+    }
+  ],
+  "preferences": {
+    "themeMode": "SYSTEM",
+    "hideAmounts": false,
+    "recentExpenseAccountId": "account-cash",
+    "recentIncomeAccountId": null,
+    "updatedAt": "2026-07-23T00:00:00Z"
+  }
+}

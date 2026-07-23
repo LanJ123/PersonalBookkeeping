@@ -52,3 +52,10 @@ I0/I1 已完成并通过；I2 待开始。
 - I2 完成账户/分类管理、流水分页筛选、详情编辑、删除撤销与 Navigation 3 四主入口；JVM 16/16、API 28/36 各 8/8。详见 [I2 实现日志](08-i2-implementation-log.md)。
 - I3 完成首页月概览、分类排行/日趋势/流水下钻、总预算和分类预算；JVM 18/18、API 28/36 各 11/11。详见 [I3 实现日志](10-i3-implementation-log.md)。
 - 两个迭代均维持 Room schema v1、无网络权限和禁用系统自动备份；API 37 继续为可选前向兼容检查。
+
+## 2026-07-23：I4
+
+- 完成严格 `.pbk` v1 备份/恢复、恢复前复核与自动回滚快照、UTF-8 CSV 导出、全局金额隐私和可选系统应用锁。
+- JVM 33/33、API 28/36 各 20/20；Debug/Release、Lint、依赖校验、权限与 schema 审计全部通过。
+- API 36 真实 SAF 冒烟成功生成 `.pbk`，并归档页面截图、实际备份和 SHA-256。
+- I4 保持 Room schema v1、无网络/存储权限并禁用系统自动备份；详见 [I4 实现日志](12-i4-implementation-log.md)和[I4 测试报告](../04-testing/08-i4-test-report.md)。

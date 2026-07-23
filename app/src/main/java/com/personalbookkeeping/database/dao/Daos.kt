@@ -5,6 +5,7 @@ import androidx.room.ColumnInfo
 import androidx.room.Insert
 import androidx.room.OnConflictStrategy
 import androidx.room.Query
+import androidx.room.Transaction
 import androidx.room.Update
 import androidx.paging.PagingSource
 import com.personalbookkeeping.database.entity.AccountEntity
@@ -120,6 +121,28 @@ data class BudgetRow(
     @ColumnInfo(name = "category_id") val categoryId: String?,
     @ColumnInfo(name = "category_name") val categoryName: String?,
     @ColumnInfo(name = "amount_minor") val amountMinor: Long,
+)
+
+data class PortableSnapshotRows(
+    val ledger: LedgerEntity,
+    val accounts: List<AccountEntity>,
+    val categories: List<CategoryEntity>,
+    val transactions: List<TransactionEntity>,
+    val budgets: List<BudgetEntity>,
+    val preferences: AppPreferencesEntity,
+)
+
+data class CsvTransactionRow(
+    val type: String,
+    @ColumnInfo(name = "amount_minor") val amountMinor: Long,
+    @ColumnInfo(name = "category_name") val categoryName: String?,
+    @ColumnInfo(name = "account_name") val accountName: String,
+    @ColumnInfo(name = "target_account_name") val targetAccountName: String?,
+    @ColumnInfo(name = "occurred_at_ms") val occurredAtMs: Long,
+    @ColumnInfo(name = "zone_id") val zoneId: String,
+    val note: String?,
+    @ColumnInfo(name = "created_at_ms") val createdAtMs: Long,
+    @ColumnInfo(name = "updated_at_ms") val updatedAtMs: Long,
 )
 
 @Dao
@@ -481,4 +504,104 @@ interface InsightsDao {
 
     @Query("DELETE FROM budgets WHERE ledger_id = :ledgerId AND period_key = :periodKey AND scope_key = :scopeKey")
     suspend fun deleteBudget(ledgerId: String, periodKey: String, scopeKey: String): Int
+}
+
+@Dao
+interface PortabilityDao {
+    @Query("SELECT * FROM ledgers LIMIT 1")
+    suspend fun getLedger(): LedgerEntity?
+
+    @Query("SELECT * FROM accounts ORDER BY sort_order, id")
+    suspend fun getAccounts(): List<AccountEntity>
+
+    @Query("SELECT * FROM categories ORDER BY kind, sort_order, id")
+    suspend fun getCategories(): List<CategoryEntity>
+
+    @Query("SELECT * FROM transactions ORDER BY occurred_at_ms, created_at_ms, id")
+    suspend fun getTransactions(): List<TransactionEntity>
+
+    @Query("SELECT * FROM budgets ORDER BY period_key, scope_key, id")
+    suspend fun getBudgets(): List<BudgetEntity>
+
+    @Query("SELECT * FROM app_preferences LIMIT 1")
+    suspend fun getPreferences(): AppPreferencesEntity?
+
+    @Query("SELECT * FROM app_preferences LIMIT 1")
+    fun observePreferences(): Flow<AppPreferencesEntity?>
+
+    @Query("UPDATE app_preferences SET hide_amounts = :hidden, updated_at_ms = :updatedAtMs")
+    suspend fun setHideAmounts(hidden: Boolean, updatedAtMs: Long): Int
+
+    @Transaction
+    suspend fun snapshot(): PortableSnapshotRows {
+        val ledger = requireNotNull(getLedger())
+        val preferences = requireNotNull(getPreferences())
+        return PortableSnapshotRows(
+            ledger = ledger,
+            accounts = getAccounts(),
+            categories = getCategories(),
+            transactions = getTransactions(),
+            budgets = getBudgets(),
+            preferences = preferences,
+        )
+    }
+
+    @Query("DELETE FROM transactions")
+    suspend fun clearTransactions()
+
+    @Query("DELETE FROM budgets")
+    suspend fun clearBudgets()
+
+    @Query("DELETE FROM app_preferences")
+    suspend fun clearPreferences()
+
+    @Query("DELETE FROM categories")
+    suspend fun clearCategories()
+
+    @Query("DELETE FROM accounts")
+    suspend fun clearAccounts()
+
+    @Query("DELETE FROM ledgers")
+    suspend fun clearLedgers()
+
+    @Insert(onConflict = OnConflictStrategy.ABORT)
+    suspend fun insertLedgerForRestore(ledger: LedgerEntity)
+
+    @Insert(onConflict = OnConflictStrategy.ABORT)
+    suspend fun insertAccountsForRestore(accounts: List<AccountEntity>)
+
+    @Insert(onConflict = OnConflictStrategy.ABORT)
+    suspend fun insertCategoriesForRestore(categories: List<CategoryEntity>)
+
+    @Insert(onConflict = OnConflictStrategy.ABORT)
+    suspend fun insertTransactionsForRestore(transactions: List<TransactionEntity>)
+
+    @Insert(onConflict = OnConflictStrategy.ABORT)
+    suspend fun insertBudgetsForRestore(budgets: List<BudgetEntity>)
+
+    @Insert(onConflict = OnConflictStrategy.ABORT)
+    suspend fun insertPreferencesForRestore(preferences: AppPreferencesEntity)
+
+    @Query(
+        """
+        SELECT t.type,
+               t.amount_minor,
+               c.name AS category_name,
+               a.name AS account_name,
+               ta.name AS target_account_name,
+               t.occurred_at_ms,
+               t.zone_id,
+               t.note,
+               t.created_at_ms,
+               t.updated_at_ms
+        FROM transactions t
+        LEFT JOIN categories c ON c.id = t.category_id
+        JOIN accounts a ON a.id = t.account_id
+        LEFT JOIN accounts ta ON ta.id = t.target_account_id
+        WHERE t.local_date_epoch_day >= :startEpochDay
+          AND t.local_date_epoch_day < :endExclusiveEpochDay
+        ORDER BY t.occurred_at_ms, t.created_at_ms, t.id
+        """,
+    )
+    suspend fun getCsvRows(startEpochDay: Long, endExclusiveEpochDay: Long): List<CsvTransactionRow>
 }

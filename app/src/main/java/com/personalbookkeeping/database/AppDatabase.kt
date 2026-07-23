@@ -9,6 +9,7 @@ import com.personalbookkeeping.database.dao.ManagementDao
 import com.personalbookkeeping.database.dao.SeedDao
 import com.personalbookkeeping.database.dao.TransactionDao
 import com.personalbookkeeping.database.dao.InsightsDao
+import com.personalbookkeeping.database.dao.PortabilityDao
 import com.personalbookkeeping.database.entity.AccountBalanceView
 import com.personalbookkeeping.database.entity.AccountEntity
 import com.personalbookkeeping.database.entity.AccountTransactionDeltaView
@@ -37,6 +38,7 @@ abstract class AppDatabase : RoomDatabase() {
     abstract fun transactionDao(): TransactionDao
     abstract fun managementDao(): ManagementDao
     abstract fun insightsDao(): InsightsDao
+    abstract fun portabilityDao(): PortabilityDao
 
     companion object {
         private const val DATABASE_NAME = "personal-bookkeeping.db"

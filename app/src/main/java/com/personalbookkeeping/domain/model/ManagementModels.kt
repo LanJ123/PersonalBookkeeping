@@ -4,7 +4,22 @@ import com.personalbookkeeping.common.Money
 
 enum class ItemStatus { ACTIVE, INACTIVE }
 
-enum class AccountType { CASH, BANK, CREDIT, INVESTMENT, OTHER }
+enum class AccountType {
+    CASH,
+    BANK,
+    E_WALLET,
+    STORED_VALUE,
+    CREDIT_CARD,
+    OTHER;
+
+    companion object {
+        fun fromStoredValue(value: String): AccountType = when (value) {
+            "CREDIT" -> CREDIT_CARD
+            "INVESTMENT" -> OTHER
+            else -> valueOf(value)
+        }
+    }
+}
 
 data class ManagedAccount(
     val id: String,

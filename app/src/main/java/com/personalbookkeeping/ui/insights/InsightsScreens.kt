@@ -49,6 +49,8 @@ import com.personalbookkeeping.domain.model.DailyTrend
 import com.personalbookkeeping.domain.model.MonthPeriod
 import com.personalbookkeeping.domain.model.RecentTransaction
 import com.personalbookkeeping.domain.model.TransactionType
+import com.personalbookkeeping.ui.privacy.displayCny
+import com.personalbookkeeping.ui.privacy.LocalAmountsHidden
 import java.time.LocalDate
 import java.time.ZoneId
 import java.time.format.DateTimeFormatter
@@ -145,7 +147,7 @@ fun StatisticsScreen(
                         Column(Modifier.padding(14.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
                             Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
                                 Text(category.categoryName, fontWeight = FontWeight.SemiBold)
-                                Text(category.amount.formatCny())
+                                Text(category.amount.displayCny())
                             }
                             Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(10.dp), verticalAlignment = Alignment.CenterVertically) {
                                 LinearProgressIndicator(progress = { share.coerceIn(0f, 1f) }, modifier = Modifier.weight(1f))
@@ -222,7 +224,7 @@ private fun SummaryCard(state: InsightsUiState) {
     Card(Modifier.fillMaxWidth()) {
         Column(Modifier.padding(18.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
             Text("本月支出", color = MaterialTheme.colorScheme.onSurfaceVariant)
-            Text(summary.expense.formatCny(), style = MaterialTheme.typography.headlineMedium, fontWeight = FontWeight.Bold)
+            Text(summary.expense.displayCny(), style = MaterialTheme.typography.headlineMedium, fontWeight = FontWeight.Bold)
             Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
                 SummaryValue("收入", summary.income)
                 SummaryValue("结余", summary.balance)
@@ -234,7 +236,7 @@ private fun SummaryCard(state: InsightsUiState) {
 
 @Composable
 private fun SummaryValue(label: String, money: Money?, text: String? = null) {
-    Column { Text(label, style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.onSurfaceVariant); Text(text ?: money!!.formatCny(), fontWeight = FontWeight.SemiBold) }
+    Column { Text(label, style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.onSurfaceVariant); Text(text ?: money!!.displayCny(), fontWeight = FontWeight.SemiBold) }
 }
 
 @Composable
@@ -242,9 +244,9 @@ private fun BudgetCard(title: String, budget: BudgetProgress, onClick: () -> Uni
     Card(Modifier.fillMaxWidth().clickable(onClick = onClick)) {
         Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
             Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) { Text(title, fontWeight = FontWeight.SemiBold); Text(budget.status.label(), color = budget.status.color()) }
-            Text("已用 ${budget.used.formatCny()} / ${budget.limit.formatCny()}")
+            Text("已用 ${budget.used.displayCny()} / ${budget.limit.displayCny()}")
             LinearProgressIndicator(progress = { budget.progressFraction }, modifier = Modifier.fillMaxWidth())
-            Text("剩余 ${budget.remaining.formatCny()}", style = MaterialTheme.typography.bodySmall)
+            Text("剩余 ${budget.remaining.displayCny()}", style = MaterialTheme.typography.bodySmall)
         }
     }
 }
@@ -268,9 +270,11 @@ private fun DailyTrendChart(trend: List<DailyTrend>) {
     val expenseColor = MaterialTheme.colorScheme.error
     val incomeColor = MaterialTheme.colorScheme.primary
     val max = trend.maxOf { maxOf(it.expense.minorUnits, it.income.minorUnits) }.coerceAtLeast(1L)
+    val amountsHidden = LocalAmountsHidden.current
     val description = trend.joinToString("；") {
         val day = LocalDate.ofEpochDay(it.epochDay).dayOfMonth
-        "${day}日收入${it.income.formatCny()}，支出${it.expense.formatCny()}"
+        if (amountsHidden) "${day}日金额已隐藏" else
+            "${day}日收入${it.income.formatCny()}，支出${it.expense.formatCny()}"
     }
     Card(Modifier.fillMaxWidth()) {
         Column(Modifier.padding(14.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
@@ -306,7 +310,7 @@ private fun BudgetManagementCard(name: String, budget: BudgetProgress, onEdit: (
     Card(Modifier.fillMaxWidth()) {
         Column(Modifier.padding(14.dp), verticalArrangement = Arrangement.spacedBy(7.dp)) {
             Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) { Text(name, fontWeight = FontWeight.SemiBold); Text(budget.status.label(), color = budget.status.color()) }
-            Text("已用 ${budget.used.formatCny()} / ${budget.limit.formatCny()}")
+            Text("已用 ${budget.used.displayCny()} / ${budget.limit.displayCny()}")
             LinearProgressIndicator(progress = { budget.progressFraction }, modifier = Modifier.fillMaxWidth())
             Row { TextButton(onClick = onEdit) { Text("编辑") }; TextButton(onClick = onClear) { Text("清除") } }
         }
@@ -361,8 +365,9 @@ private fun TransactionType.label() = when (this) {
     TransactionType.TRANSFER -> "转账"
 }
 
+@Composable
 private fun RecentTransaction.signedAmount() = when (type) {
-    TransactionType.EXPENSE -> "-${amount.formatCny()}"
-    TransactionType.INCOME -> amount.formatCny(showPositiveSign = true)
-    TransactionType.TRANSFER -> amount.formatCny()
+    TransactionType.EXPENSE -> "-${amount.displayCny()}"
+    TransactionType.INCOME -> amount.displayCny(showPositiveSign = true)
+    TransactionType.TRANSFER -> amount.displayCny()
 }

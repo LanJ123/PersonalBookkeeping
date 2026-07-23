@@ -45,6 +45,10 @@ import com.personalbookkeeping.ui.management.AccountsScreen
 import com.personalbookkeeping.ui.management.CategoriesScreen
 import com.personalbookkeeping.ui.management.ManagementViewModel
 import com.personalbookkeeping.ui.management.ManagementViewModelFactory
+import com.personalbookkeeping.ui.settings.DataTransferScreen
+import com.personalbookkeeping.ui.settings.PrivacySettingsScreen
+import com.personalbookkeeping.ui.settings.SettingsViewModel
+import com.personalbookkeeping.ui.settings.SettingsViewModelFactory
 import com.personalbookkeeping.ui.transaction.TransactionEditorScreen
 import com.personalbookkeeping.ui.transaction.TransactionEditorViewModel
 import com.personalbookkeeping.ui.transaction.TransactionEditorViewModelFactory
@@ -63,6 +67,8 @@ sealed interface AppNavKey : NavKey
 @Serializable data object AccountsKey : AppNavKey
 @Serializable data object CategoriesKey : AppNavKey
 @Serializable data object BudgetsKey : AppNavKey
+@Serializable data object DataTransferKey : AppNavKey
+@Serializable data object PrivacyKey : AppNavKey
 
 private data class RootTab(val key: AppNavKey, val glyph: String, val label: String)
 
@@ -74,7 +80,13 @@ private val rootTabs = listOf(
 )
 
 @Composable
-fun BookkeepingApp(container: AppContainer) {
+fun BookkeepingApp(
+    container: AppContainer,
+    appLockEnabled: Boolean,
+    appLockMessage: String?,
+    amountsHidden: Boolean,
+    onAppLockChanged: (Boolean) -> Unit,
+) {
     val backStack = rememberNavBackStack(HomeKey)
     val ledgerViewModel: LedgerViewModel = viewModel(
         factory = LedgerViewModelFactory(container.ledgerRepository, container.transactionRepository),
@@ -85,9 +97,13 @@ fun BookkeepingApp(container: AppContainer) {
     val insightsViewModel: InsightsViewModel = viewModel(
         factory = InsightsViewModelFactory(container.insightsRepository),
     )
+    val settingsViewModel: SettingsViewModel = viewModel(
+        factory = SettingsViewModelFactory(container.portabilityService),
+    )
     val ledgerState by ledgerViewModel.state.collectAsStateWithLifecycle()
     val managementState by managementViewModel.state.collectAsStateWithLifecycle()
     val insightsState by insightsViewModel.state.collectAsStateWithLifecycle()
+    val settingsState by settingsViewModel.state.collectAsStateWithLifecycle()
     val current = backStack.lastOrNull()
     val isRoot = rootTabs.any { it.key == current }
     val ledgerSnackbar = remember { SnackbarHostState() }
@@ -177,6 +193,30 @@ fun BookkeepingApp(container: AppContainer) {
                             onAccounts = { backStack.add(AccountsKey) },
                             onCategories = { backStack.add(CategoriesKey) },
                             onBudgets = { backStack.add(BudgetsKey) },
+                            onDataTransfer = { backStack.add(DataTransferKey) },
+                            onPrivacy = { backStack.add(PrivacyKey) },
+                        )
+                    }
+                    DataTransferKey -> NavEntry(key) {
+                        DataTransferScreen(
+                            state = settingsState,
+                            onBack = { backStack.removeLastOrNull() },
+                            onBackup = settingsViewModel::createBackup,
+                            onRestoreSelected = settingsViewModel::inspectBackup,
+                            onConfirmRestore = settingsViewModel::confirmRestore,
+                            onCancelRestore = settingsViewModel::cancelRestoreReview,
+                            onExportCsv = settingsViewModel::exportCsv,
+                            onInputError = settingsViewModel::showMessage,
+                        )
+                    }
+                    PrivacyKey -> NavEntry(key) {
+                        PrivacySettingsScreen(
+                            amountsHidden = amountsHidden,
+                            appLockEnabled = appLockEnabled,
+                            appLockMessage = appLockMessage,
+                            onBack = { backStack.removeLastOrNull() },
+                            onAmountsHiddenChanged = settingsViewModel::setHideAmounts,
+                            onAppLockChanged = onAppLockChanged,
                         )
                     }
                     BudgetsKey -> NavEntry(key) {
@@ -261,7 +301,13 @@ fun BookkeepingApp(container: AppContainer) {
 }
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-private fun SettingsScreen(onAccounts: () -> Unit, onCategories: () -> Unit, onBudgets: () -> Unit) {
+private fun SettingsScreen(
+    onAccounts: () -> Unit,
+    onCategories: () -> Unit,
+    onBudgets: () -> Unit,
+    onDataTransfer: () -> Unit,
+    onPrivacy: () -> Unit,
+) {
     Column(Modifier.fillMaxSize()) {
         TopAppBar(title = { Text("设置") })
         Column(
@@ -271,7 +317,9 @@ private fun SettingsScreen(onAccounts: () -> Unit, onCategories: () -> Unit, onB
             Button(onClick = onAccounts, modifier = Modifier.fillMaxWidth().height(64.dp)) { Text("账户管理") }
             Button(onClick = onCategories, modifier = Modifier.fillMaxWidth().height(64.dp)) { Text("分类管理") }
             Button(onClick = onBudgets, modifier = Modifier.fillMaxWidth().height(64.dp)) { Text("预算管理") }
-            Text("数据仅保存在本机；备份与恢复将在 I4 接入。", color = MaterialTheme.colorScheme.onSurfaceVariant)
+            Button(onClick = onDataTransfer, modifier = Modifier.fillMaxWidth().height(64.dp)) { Text("数据与备份") }
+            Button(onClick = onPrivacy, modifier = Modifier.fillMaxWidth().height(64.dp)) { Text("隐私与安全") }
+            Text("数据仅保存在本机，不会自动上传。", color = MaterialTheme.colorScheme.onSurfaceVariant)
         }
     }
 }

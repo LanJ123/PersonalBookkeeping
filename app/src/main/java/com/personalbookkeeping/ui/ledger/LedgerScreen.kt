@@ -43,6 +43,7 @@ import com.personalbookkeeping.domain.model.CategoryKind
 import com.personalbookkeeping.domain.model.LedgerTransaction
 import com.personalbookkeeping.domain.model.TransactionFilter
 import com.personalbookkeeping.domain.model.TransactionType
+import com.personalbookkeeping.ui.privacy.displayCny
 import java.time.LocalDate
 import java.time.format.DateTimeFormatter
 
@@ -178,7 +179,7 @@ private fun DailyHeader(item: LedgerTransaction) {
         horizontalArrangement = Arrangement.SpaceBetween,
     ) {
         Text(LocalDate.ofEpochDay(item.localDateEpochDay).format(DateTimeFormatter.ofPattern("M月d日 EEEE")), fontWeight = FontWeight.SemiBold)
-        Text("支 ${item.dailyExpense.formatCny()} · 收 ${item.dailyIncome.formatCny()}", style = MaterialTheme.typography.labelMedium)
+        Text("支 ${item.dailyExpense.displayCny()} · 收 ${item.dailyIncome.displayCny()}", style = MaterialTheme.typography.labelMedium)
     }
 }
 
@@ -199,9 +200,9 @@ private fun TransactionCard(item: LedgerTransaction, onClick: (String) -> Unit) 
                 item.note?.let { Text(it, style = MaterialTheme.typography.bodySmall, maxLines = 1) }
             }
             val amount = when (item.type) {
-                TransactionType.EXPENSE -> "-${item.amount.formatCny()}"
-                TransactionType.INCOME -> item.amount.formatCny(showPositiveSign = true)
-                TransactionType.TRANSFER -> item.amount.formatCny()
+                TransactionType.EXPENSE -> "-${item.amount.displayCny()}"
+                TransactionType.INCOME -> item.amount.displayCny(showPositiveSign = true)
+                TransactionType.TRANSFER -> item.amount.displayCny()
             }
             Text(amount, fontWeight = FontWeight.SemiBold)
         }

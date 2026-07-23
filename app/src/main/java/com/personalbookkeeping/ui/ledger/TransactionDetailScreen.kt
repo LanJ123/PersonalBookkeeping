@@ -27,6 +27,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import com.personalbookkeeping.domain.model.TransactionType
+import com.personalbookkeeping.ui.privacy.displayCny
 import java.time.ZoneId
 import java.time.format.DateTimeFormatter
 
@@ -66,9 +67,9 @@ fun TransactionDetailScreen(
                 ) {
                     Text(transaction.type.label(), style = MaterialTheme.typography.titleMedium)
                     val amount = when (transaction.type) {
-                        TransactionType.EXPENSE -> "-${transaction.amount.formatCny()}"
-                        TransactionType.INCOME -> transaction.amount.formatCny(showPositiveSign = true)
-                        TransactionType.TRANSFER -> transaction.amount.formatCny()
+                        TransactionType.EXPENSE -> "-${transaction.amount.displayCny()}"
+                        TransactionType.INCOME -> transaction.amount.displayCny(showPositiveSign = true)
+                        TransactionType.TRANSFER -> transaction.amount.displayCny()
                     }
                     Text(amount, style = MaterialTheme.typography.headlineMedium, fontWeight = FontWeight.Bold)
                     HorizontalDivider()

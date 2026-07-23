@@ -40,6 +40,7 @@ import com.personalbookkeeping.domain.model.AccountOption
 import com.personalbookkeeping.domain.model.CategoryOption
 import com.personalbookkeeping.domain.model.RecentTransaction
 import com.personalbookkeeping.domain.model.TransactionType
+import com.personalbookkeeping.ui.privacy.displayCny
 import com.personalbookkeeping.domain.validation.TransactionValidationError
 import java.text.DateFormat
 import java.util.Date
@@ -335,9 +336,9 @@ private fun RecentTransactionCard(transaction: RecentTransaction) {
         )
     }
     val amount = when (transaction.type) {
-        TransactionType.EXPENSE -> "-${transaction.amount.formatCny()}"
-        TransactionType.INCOME -> transaction.amount.formatCny(showPositiveSign = true)
-        TransactionType.TRANSFER -> transaction.amount.formatCny()
+        TransactionType.EXPENSE -> "-${transaction.amount.displayCny()}"
+        TransactionType.INCOME -> transaction.amount.displayCny(showPositiveSign = true)
+        TransactionType.TRANSFER -> transaction.amount.displayCny()
     }
     Card(modifier = Modifier.fillMaxWidth()) {
         Row(
