@@ -20,7 +20,6 @@ import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
-import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
@@ -37,6 +36,11 @@ import com.personalbookkeeping.ui.ledger.LedgerViewModelFactory
 import com.personalbookkeeping.ui.ledger.TransactionDetailScreen
 import com.personalbookkeeping.ui.ledger.TransactionDetailViewModel
 import com.personalbookkeeping.ui.ledger.TransactionDetailViewModelFactory
+import com.personalbookkeeping.ui.insights.BudgetsScreen
+import com.personalbookkeeping.ui.insights.HomeScreen
+import com.personalbookkeeping.ui.insights.InsightsViewModel
+import com.personalbookkeeping.ui.insights.InsightsViewModelFactory
+import com.personalbookkeeping.ui.insights.StatisticsScreen
 import com.personalbookkeeping.ui.management.AccountsScreen
 import com.personalbookkeeping.ui.management.CategoriesScreen
 import com.personalbookkeeping.ui.management.ManagementViewModel
@@ -58,6 +62,7 @@ sealed interface AppNavKey : NavKey
 @Serializable data class TransactionDetailKey(val transactionId: String) : AppNavKey
 @Serializable data object AccountsKey : AppNavKey
 @Serializable data object CategoriesKey : AppNavKey
+@Serializable data object BudgetsKey : AppNavKey
 
 private data class RootTab(val key: AppNavKey, val glyph: String, val label: String)
 
@@ -70,20 +75,26 @@ private val rootTabs = listOf(
 
 @Composable
 fun BookkeepingApp(container: AppContainer) {
-    val backStack = rememberNavBackStack(LedgerKey)
+    val backStack = rememberNavBackStack(HomeKey)
     val ledgerViewModel: LedgerViewModel = viewModel(
         factory = LedgerViewModelFactory(container.ledgerRepository, container.transactionRepository),
     )
     val managementViewModel: ManagementViewModel = viewModel(
         factory = ManagementViewModelFactory(container.managementRepository, container.transactionRepository),
     )
+    val insightsViewModel: InsightsViewModel = viewModel(
+        factory = InsightsViewModelFactory(container.insightsRepository),
+    )
     val ledgerState by ledgerViewModel.state.collectAsStateWithLifecycle()
     val managementState by managementViewModel.state.collectAsStateWithLifecycle()
+    val insightsState by insightsViewModel.state.collectAsStateWithLifecycle()
     val current = backStack.lastOrNull()
     val isRoot = rootTabs.any { it.key == current }
     val ledgerSnackbar = remember { SnackbarHostState() }
     val accountSnackbar = remember { SnackbarHostState() }
     val categorySnackbar = remember { SnackbarHostState() }
+    val homeSnackbar = remember { SnackbarHostState() }
+    val budgetSnackbar = remember { SnackbarHostState() }
 
     fun openEditor(id: String? = null) {
         backStack.add(TransactionEditorKey(id, UUID.randomUUID().toString()))
@@ -117,7 +128,21 @@ fun BookkeepingApp(container: AppContainer) {
             onBack = { if (backStack.size > 1) backStack.removeLastOrNull() },
             entryProvider = { key ->
                 when (key) {
-                    HomeKey -> NavEntry(key) { PlaceholderScreen("首页", "净资产与月度摘要将在 I3 接入。") }
+                    HomeKey -> NavEntry(key) {
+                        HomeScreen(
+                            state = insightsState,
+                            snackbarHostState = homeSnackbar,
+                            onPreviousMonth = insightsViewModel::previousMonth,
+                            onNextMonth = insightsViewModel::nextMonth,
+                            onViewAll = { period ->
+                                ledgerViewModel.showMonth(period)
+                                switchRoot(LedgerKey)
+                            },
+                            onTransactionClick = { backStack.add(TransactionDetailKey(it)) },
+                            onBudgets = { backStack.add(BudgetsKey) },
+                            onMessageConsumed = insightsViewModel::consumeMessage,
+                        )
+                    }
                     LedgerKey -> NavEntry(key) {
                         val transactions = ledgerViewModel.transactions.collectAsLazyPagingItems()
                         LedgerScreen(
@@ -136,11 +161,34 @@ fun BookkeepingApp(container: AppContainer) {
                             onMessageConsumed = ledgerViewModel::consumeMessage,
                         )
                     }
-                    StatisticsKey -> NavEntry(key) { PlaceholderScreen("统计", "月度趋势与分类占比将在 I3 接入。") }
+                    StatisticsKey -> NavEntry(key) {
+                        StatisticsScreen(
+                            state = insightsState,
+                            onPreviousMonth = insightsViewModel::previousMonth,
+                            onNextMonth = insightsViewModel::nextMonth,
+                            onCategoryClick = { period, categoryId ->
+                                ledgerViewModel.showMonth(period, categoryId)
+                                switchRoot(LedgerKey)
+                            },
+                        )
+                    }
                     SettingsKey -> NavEntry(key) {
                         SettingsScreen(
                             onAccounts = { backStack.add(AccountsKey) },
                             onCategories = { backStack.add(CategoriesKey) },
+                            onBudgets = { backStack.add(BudgetsKey) },
+                        )
+                    }
+                    BudgetsKey -> NavEntry(key) {
+                        BudgetsScreen(
+                            state = insightsState,
+                            snackbarHostState = budgetSnackbar,
+                            onBack = { backStack.removeLastOrNull() },
+                            onPreviousMonth = insightsViewModel::previousMonth,
+                            onNextMonth = insightsViewModel::nextMonth,
+                            onSave = insightsViewModel::saveBudget,
+                            onClear = insightsViewModel::clearBudget,
+                            onMessageConsumed = insightsViewModel::consumeMessage,
                         )
                     }
                     AccountsKey -> NavEntry(key) {
@@ -211,10 +259,9 @@ fun BookkeepingApp(container: AppContainer) {
         )
     }
 }
-
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-private fun SettingsScreen(onAccounts: () -> Unit, onCategories: () -> Unit) {
+private fun SettingsScreen(onAccounts: () -> Unit, onCategories: () -> Unit, onBudgets: () -> Unit) {
     Column(Modifier.fillMaxSize()) {
         TopAppBar(title = { Text("设置") })
         Column(
@@ -223,20 +270,8 @@ private fun SettingsScreen(onAccounts: () -> Unit, onCategories: () -> Unit) {
         ) {
             Button(onClick = onAccounts, modifier = Modifier.fillMaxWidth().height(64.dp)) { Text("账户管理") }
             Button(onClick = onCategories, modifier = Modifier.fillMaxWidth().height(64.dp)) { Text("分类管理") }
+            Button(onClick = onBudgets, modifier = Modifier.fillMaxWidth().height(64.dp)) { Text("预算管理") }
             Text("数据仅保存在本机；备份与恢复将在 I4 接入。", color = MaterialTheme.colorScheme.onSurfaceVariant)
         }
-    }
-}
-
-@OptIn(ExperimentalMaterial3Api::class)
-@Composable
-private fun PlaceholderScreen(title: String, message: String) {
-    Column(Modifier.fillMaxSize()) {
-        TopAppBar(title = { Text(title) })
-        Column(
-            Modifier.fillMaxSize().padding(24.dp),
-            verticalArrangement = Arrangement.Center,
-            horizontalAlignment = Alignment.CenterHorizontally,
-        ) { Text(message, color = MaterialTheme.colorScheme.onSurfaceVariant) }
     }
 }

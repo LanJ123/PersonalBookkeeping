@@ -9,7 +9,7 @@
 | FR-010～016 | transaction UI、usecase、repository、Room | transactions、validate triggers、withTransaction | Money/交易单元测试、事务故障注入 |
 | FR-020～024 | settings/accounts/categories、repository | accounts/categories、active_name_key、balance view | 唯一/停用/FK/余额重算测试 |
 | FR-030～033 | ledger UI、PagingSource | period/account/category indexes | 组合查询、分页、空/错 UI 测试 |
-| FR-040～045 | home/statistics/budget usecases | 聚合 projections、budgets | 汇总对账、月边界、下钻、预算阈值 |
+| FR-040～045 | home/statistics/budget repository、ViewModel、Compose | 聚合 projections、budgets | TC-I3-001～012：汇总对账、月边界、下钻、预算阈值（已通过） |
 | FR-050～055 | backup、export、SAF UI | `.pbk` v1、JSON Schema、CSV v1 | 黄金 fixture、恶意输入、往返恢复 |
 | NFR-001～005 | Manifest、security、backup validator | allowBackup/rules、限制、脱敏 | APK/Manifest/依赖/恶意文件审计 |
 | NFR-010～013 | Room、migration、mutation coordinator | transactions、schema export、pre-restore | 原子性、迁移、崩溃/故障注入 |

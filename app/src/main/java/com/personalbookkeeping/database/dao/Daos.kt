@@ -96,6 +96,32 @@ data class ManagedCategoryRow(
     @ColumnInfo(name = "transaction_count") val transactionCount: Int,
 )
 
+data class MonthlySummaryRow(
+    @ColumnInfo(name = "income_minor") val incomeMinor: Long,
+    @ColumnInfo(name = "expense_minor") val expenseMinor: Long,
+    @ColumnInfo(name = "transaction_count") val transactionCount: Int,
+)
+
+data class CategorySpendingRow(
+    @ColumnInfo(name = "category_id") val categoryId: String,
+    @ColumnInfo(name = "category_name") val categoryName: String,
+    @ColumnInfo(name = "amount_minor") val amountMinor: Long,
+)
+
+data class DailyTrendRow(
+    @ColumnInfo(name = "local_date_epoch_day") val localDateEpochDay: Long,
+    @ColumnInfo(name = "income_minor") val incomeMinor: Long,
+    @ColumnInfo(name = "expense_minor") val expenseMinor: Long,
+)
+
+data class BudgetRow(
+    val id: String,
+    @ColumnInfo(name = "scope_key") val scopeKey: String,
+    @ColumnInfo(name = "category_id") val categoryId: String?,
+    @ColumnInfo(name = "category_name") val categoryName: String?,
+    @ColumnInfo(name = "amount_minor") val amountMinor: Long,
+)
+
 @Dao
 interface SeedDao {
     @Query("SELECT COUNT(*) FROM ledgers")
@@ -344,4 +370,115 @@ interface ManagementDao {
 
     @Update
     suspend fun updateCategory(category: CategoryEntity)
+}
+
+@Dao
+interface InsightsDao {
+    @Query(
+        """
+        SELECT COALESCE(SUM(CASE WHEN type = 'INCOME' THEN amount_minor ELSE 0 END), 0) AS income_minor,
+               COALESCE(SUM(CASE WHEN type = 'EXPENSE' THEN amount_minor ELSE 0 END), 0) AS expense_minor,
+               COUNT(*) AS transaction_count
+        FROM transactions
+        WHERE ledger_id = :ledgerId
+          AND local_date_epoch_day >= :startEpochDay
+          AND local_date_epoch_day < :endExclusiveEpochDay
+        """,
+    )
+    fun observeMonthlySummary(
+        ledgerId: String,
+        startEpochDay: Long,
+        endExclusiveEpochDay: Long,
+    ): Flow<MonthlySummaryRow>
+
+    @Query(
+        """
+        SELECT t.category_id,
+               c.name AS category_name,
+               SUM(t.amount_minor) AS amount_minor
+        FROM transactions t
+        JOIN categories c ON c.id = t.category_id
+        WHERE t.ledger_id = :ledgerId
+          AND t.type = 'EXPENSE'
+          AND t.local_date_epoch_day >= :startEpochDay
+          AND t.local_date_epoch_day < :endExclusiveEpochDay
+        GROUP BY t.category_id, c.name
+        ORDER BY amount_minor DESC, c.sort_order, c.name
+        """,
+    )
+    fun observeCategorySpending(
+        ledgerId: String,
+        startEpochDay: Long,
+        endExclusiveEpochDay: Long,
+    ): Flow<List<CategorySpendingRow>>
+
+    @Query(
+        """
+        SELECT local_date_epoch_day,
+               COALESCE(SUM(CASE WHEN type = 'INCOME' THEN amount_minor ELSE 0 END), 0) AS income_minor,
+               COALESCE(SUM(CASE WHEN type = 'EXPENSE' THEN amount_minor ELSE 0 END), 0) AS expense_minor
+        FROM transactions
+        WHERE ledger_id = :ledgerId
+          AND local_date_epoch_day >= :startEpochDay
+          AND local_date_epoch_day < :endExclusiveEpochDay
+          AND type IN ('INCOME', 'EXPENSE')
+        GROUP BY local_date_epoch_day
+        ORDER BY local_date_epoch_day
+        """,
+    )
+    fun observeDailyTrend(
+        ledgerId: String,
+        startEpochDay: Long,
+        endExclusiveEpochDay: Long,
+    ): Flow<List<DailyTrendRow>>
+
+    @Query(
+        """
+        SELECT t.id,
+               t.type,
+               t.amount_minor,
+               c.name AS category_name,
+               a.name AS account_name,
+               ta.name AS target_account_name,
+               t.occurred_at_ms
+        FROM transactions t
+        LEFT JOIN categories c ON c.id = t.category_id
+        JOIN accounts a ON a.id = t.account_id
+        LEFT JOIN accounts ta ON ta.id = t.target_account_id
+        WHERE t.ledger_id = :ledgerId
+          AND t.local_date_epoch_day >= :startEpochDay
+          AND t.local_date_epoch_day < :endExclusiveEpochDay
+        ORDER BY t.local_date_epoch_day DESC, t.occurred_at_ms DESC, t.created_at_ms DESC
+        LIMIT :limit
+        """,
+    )
+    fun observeRecentInPeriod(
+        ledgerId: String,
+        startEpochDay: Long,
+        endExclusiveEpochDay: Long,
+        limit: Int,
+    ): Flow<List<RecentTransactionRow>>
+
+    @Query(
+        """
+        SELECT b.id, b.scope_key, b.category_id, c.name AS category_name, b.amount_minor
+        FROM budgets b
+        LEFT JOIN categories c ON c.id = b.category_id
+        WHERE b.ledger_id = :ledgerId AND b.period_key = :periodKey
+        ORDER BY CASE WHEN b.scope_key = 'TOTAL' THEN 0 ELSE 1 END, c.sort_order, c.name
+        """,
+    )
+    fun observeBudgets(ledgerId: String, periodKey: String): Flow<List<BudgetRow>>
+
+    @Query("SELECT * FROM budgets WHERE ledger_id = :ledgerId AND period_key = :periodKey AND scope_key = :scopeKey")
+    suspend fun getBudget(ledgerId: String, periodKey: String, scopeKey: String): BudgetEntity?
+
+    @Insert(onConflict = OnConflictStrategy.ABORT)
+    suspend fun insertBudget(budget: BudgetEntity)
+
+    @Update
+    suspend fun updateBudget(budget: BudgetEntity)
+
+    @Query("DELETE FROM budgets WHERE ledger_id = :ledgerId AND period_key = :periodKey AND scope_key = :scopeKey")
+    suspend fun deleteBudget(ledgerId: String, periodKey: String, scopeKey: String): Int
 }

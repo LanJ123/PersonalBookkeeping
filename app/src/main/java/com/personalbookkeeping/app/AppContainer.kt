@@ -5,11 +5,13 @@ import com.personalbookkeeping.common.SystemAppClock
 import com.personalbookkeeping.common.UuidGenerator
 import com.personalbookkeeping.data.repository.OfflineTransactionRepository
 import com.personalbookkeeping.data.repository.OfflineManagementRepository
+import com.personalbookkeeping.data.repository.OfflineInsightsRepository
 import com.personalbookkeeping.database.AppDatabase
 import com.personalbookkeeping.database.seed.InitialDataSeeder
 import com.personalbookkeeping.domain.repository.TransactionRepository
 import com.personalbookkeeping.domain.repository.LedgerRepository
 import com.personalbookkeeping.domain.repository.ManagementRepository
+import com.personalbookkeeping.domain.repository.InsightsRepository
 import com.personalbookkeeping.domain.usecase.CreateTransactionUseCase
 import com.personalbookkeeping.domain.usecase.UpdateTransactionUseCase
 import java.time.ZoneId
@@ -25,6 +27,11 @@ class AppContainer(context: Context) {
     val transactionRepository: TransactionRepository = offlineTransactionRepository
     val ledgerRepository: LedgerRepository = offlineTransactionRepository
     val managementRepository: ManagementRepository = OfflineManagementRepository(
+        database = database,
+        clock = SystemAppClock,
+        idGenerator = UuidGenerator,
+    )
+    val insightsRepository: InsightsRepository = OfflineInsightsRepository(
         database = database,
         clock = SystemAppClock,
         idGenerator = UuidGenerator,

@@ -10,6 +10,7 @@ import com.personalbookkeeping.domain.model.LedgerTransaction
 import com.personalbookkeeping.domain.model.TransactionFilter
 import com.personalbookkeeping.domain.model.TransactionRecord
 import com.personalbookkeeping.domain.model.TransactionType
+import com.personalbookkeeping.domain.model.MonthPeriod
 import com.personalbookkeeping.domain.repository.LedgerRepository
 import com.personalbookkeeping.domain.repository.TransactionRepository
 import java.time.LocalDate
@@ -71,6 +72,19 @@ class LedgerViewModel(
 
     fun clearFilters() {
         mutableState.update { it.copy(filter = TransactionFilter()) }
+    }
+
+    fun showMonth(period: MonthPeriod, categoryId: String? = null) {
+        mutableState.update {
+            it.copy(
+                filter = TransactionFilter(
+                    type = if (categoryId == null) null else TransactionType.EXPENSE,
+                    categoryId = categoryId,
+                    fromEpochDay = period.startEpochDay,
+                    toEpochDay = period.endInclusiveEpochDay,
+                ),
+            )
+        }
     }
 
     fun delete(id: String) {

@@ -1,12 +1,12 @@
 # 项目文档索引
 
-> 文档版本：v2.3；更新时间：2026-07-22；阶段：第 4 阶段迭代实现（I0～I2 已通过，等待 I3 授权）。
+> 文档版本：v2.4；更新时间：2026-07-23；阶段：第 4 阶段迭代实现（I0～I3 已通过，等待 I4 授权）。
 
 ## 00 项目管理
 
 | 文档 | 用途 | 状态 |
 |---|---|---|
-| [开发流程与阶段门](00-project/01-development-process.md) | 定义每阶段活动、产物与进入/退出条件 | 第 4 阶段；I2 已通过 |
+| [开发流程与阶段门](00-project/01-development-process.md) | 定义每阶段活动、产物与进入/退出条件 | 第 4 阶段；I3 已通过 |
 | [决策日志](00-project/02-decision-log.md) | 保存关键产品和技术决策 | 持续更新 |
 | [变更记录](00-project/03-change-log.md) | 保存基线后的正式变更及影响分析 | 持续更新 |
 
@@ -65,12 +65,14 @@
 |---|---|---|
 | [Windows Android 开发环境准备指南](03-implementation/01-environment-setup-windows.md) | 记录当前环境审计、安装步骤和验收命令 | v0.1 已完成 |
 | [Windows Android 开发环境验收报告](03-implementation/02-environment-verification.md) | 保存实际安装版本、AVD 配置与剩余验证项 | v1.1；必需环境通过 |
-| [迭代实现计划](03-implementation/03-iteration-plan.md) | 定义垂直切片、验收门槛和交付顺序 | v1.1；I2 已通过 |
+| [迭代实现计划](03-implementation/03-iteration-plan.md) | 定义垂直切片、验收门槛和交付顺序 | v1.2；I3 已通过 |
 | [编码规范](03-implementation/04-coding-standards.md) | 统一 Kotlin、Compose、Room、隐私和测试约束 | v1.0；已生效 |
 | [构建与运行说明](03-implementation/05-build-and-run.md) | 保存本机构建、测试、安装和排错命令 | v1.0；持续更新 |
 | [实现日志](03-implementation/06-implementation-log.md) | 逐次保存代码产物、验证结果和遗留事项 | 持续更新 |
 | [I2 详细设计](03-implementation/07-i2-detailed-design.md) | 固化导航、筛选、管理、编辑删除与撤销契约 | v1.0；已批准实现 |
 | [I2 实现日志](03-implementation/08-i2-implementation-log.md) | 保存 I2 代码、测试和问题处理记录 | v1.0；已完成 |
+| [I3 详细设计](03-implementation/09-i3-detailed-design.md) | 固化月份、聚合、统计下钻与预算契约 | v1.0；已实施 |
+| [I3 实现日志](03-implementation/10-i3-implementation-log.md) | 保存 I3 代码、测试和问题处理记录 | v1.0；已完成 |
 
 ## 04 测试
 
@@ -82,6 +84,10 @@
 | [I2 测试用例](04-testing/03-i2-test-cases.md) | 定义管理、流水、设备、构建与隐私验证 | v1.0；已执行 |
 | [I2 测试报告](04-testing/04-i2-test-report.md) | 保存 I2 自动化、设备矩阵、哈希和退出结论 | v1.0；通过 |
 | [I2 API 36 运行截图](04-testing/evidence/2026-07-22-i2-api36.png) | 保存 I2 流水页视觉冒烟证据 | 已归档 |
+| [I3 测试用例](04-testing/05-i3-test-cases.md) | 定义月份、聚合、预算、页面、设备与审计验证 | v1.0；已执行 |
+| [I3 测试报告](04-testing/06-i3-test-report.md) | 保存 I3 自动化、设备矩阵、哈希和退出结论 | v1.0；通过 |
+| [I3 API 36 首页截图](04-testing/evidence/2026-07-22-i3-api36-home.png) | 保存 I3 首页空状态视觉证据 | 已归档 |
+| [I3 API 36 预算截图](04-testing/evidence/2026-07-22-i3-api36-budget.png) | 保存 I3 预算保存视觉证据 | 已归档 |
 
 ## 后续阶段预留目录
 

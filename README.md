@@ -2,7 +2,7 @@
 
 个人使用、完全离线的 Android 记账应用。
 
-当前状态：**需求、UX 与技术设计 v1.0 均已确认；第 4 阶段 I0～I2 已通过，等待确认是否进入 I3（首页、统计与预算）。**
+当前状态：**需求、UX 与技术设计 v1.0 均已确认；第 4 阶段 I0～I3 已通过，等待确认是否进入 I4（备份恢复、CSV、应用锁与隐私遮罩）。**
 
 ## 文档入口
 
@@ -21,6 +21,7 @@
 - [构建与运行说明](docs/03-implementation/05-build-and-run.md)
 - [I1 测试报告](docs/04-testing/02-i1-test-report.md)
 - [I2 测试报告](docs/04-testing/04-i2-test-report.md)
+- [I3 测试报告](docs/04-testing/06-i3-test-report.md)
 
 ## 产品原则
 

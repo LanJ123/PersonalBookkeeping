@@ -6,6 +6,7 @@ import com.personalbookkeeping.common.AppClock
 import com.personalbookkeeping.common.IdGenerator
 import com.personalbookkeeping.data.repository.OfflineManagementRepository
 import com.personalbookkeeping.data.repository.OfflineTransactionRepository
+import com.personalbookkeeping.data.repository.OfflineInsightsRepository
 import com.personalbookkeeping.database.entity.TransactionEntity
 import com.personalbookkeeping.database.seed.InitialDataSeeder
 import com.personalbookkeeping.domain.usecase.CreateTransactionUseCase
@@ -14,6 +15,9 @@ import com.personalbookkeeping.domain.model.CategoryKind
 import com.personalbookkeeping.domain.model.ManagementResult
 import com.personalbookkeeping.domain.model.MoveDirection
 import com.personalbookkeeping.domain.model.TransactionType
+import com.personalbookkeeping.domain.model.MonthPeriod
+import com.personalbookkeeping.domain.model.BudgetStatus
+import com.personalbookkeeping.common.Money
 import androidx.paging.PagingSource
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.runBlocking
@@ -165,6 +169,44 @@ class AppDatabaseTest {
         assertEquals("现金", transactions.getTransaction("historical")?.accountName)
     }
 
+    @Test
+    fun monthlyInsightsReconcileAndBudgetsCountOnlyExpenses() = runBlocking {
+        InitialDataSeeder(database, AppClock { NOW }).seedIfNeeded()
+        val dao = database.transactionDao()
+        dao.insert(transaction("food", "EXPENSE", 7_000, CASH_ID, null, EXPENSE_CATEGORY_ID))
+        dao.insert(transaction("traffic", "EXPENSE", 1_000, CASH_ID, null, SECOND_EXPENSE_CATEGORY_ID))
+        dao.insert(transaction("salary", "INCOME", 20_000, BANK_ID, null, INCOME_CATEGORY_ID))
+        dao.insert(transaction("move", "TRANSFER", 50_000, BANK_ID, CASH_ID, null))
+        dao.insert(
+            transaction("previous", "EXPENSE", 99_999, CASH_ID, null, EXPENSE_CATEGORY_ID)
+                .copy(localDateEpochDay = LocalDate.of(2026, 6, 30).toEpochDay()),
+        )
+        var generated = 0
+        val repository = OfflineInsightsRepository(database, AppClock { NOW }, IdGenerator { "budget-${++generated}" })
+        val period = MonthPeriod(2026, 7)
+        repository.setBudget(period, null, Money.fromMinor(10_000))
+        repository.setBudget(period, EXPENSE_CATEGORY_ID, Money.fromMinor(8_000))
+
+        val insights = repository.observeInsights(period).first()
+        assertEquals(20_000L, insights.summary.income.minorUnits)
+        assertEquals(8_000L, insights.summary.expense.minorUnits)
+        assertEquals(12_000L, insights.summary.balance.minorUnits)
+        assertEquals(4, insights.summary.transactionCount)
+        assertEquals(insights.summary.expense.minorUnits, insights.categories.sumOf { it.amount.minorUnits })
+        assertEquals(insights.summary.expense.minorUnits, insights.dailyTrend.sumOf { it.expense.minorUnits })
+        assertEquals(insights.summary.income.minorUnits, insights.dailyTrend.sumOf { it.income.minorUnits })
+        assertEquals(4, insights.recentTransactions.size)
+        assertEquals(8_000L, insights.totalBudget?.used?.minorUnits)
+        assertEquals(BudgetStatus.NEAR_LIMIT, insights.totalBudget?.status)
+        assertEquals(7_000L, insights.categoryBudgets.single().used.minorUnits)
+        assertEquals(BudgetStatus.NEAR_LIMIT, insights.categoryBudgets.single().status)
+
+        repository.setBudget(period, null, Money.fromMinor(7_000))
+        assertEquals(BudgetStatus.EXCEEDED, repository.observeInsights(period).first().totalBudget?.status)
+        repository.clearBudget(period, null)
+        assertEquals(null, repository.observeInsights(period).first().totalBudget)
+    }
+
     private fun transaction(
         id: String,
         type: String,
@@ -193,6 +235,7 @@ class AppDatabaseTest {
         private const val CASH_ID = "00000000-0000-0000-0000-000000000101"
         private const val BANK_ID = "00000000-0000-0000-0000-000000000102"
         private const val EXPENSE_CATEGORY_ID = "00000000-0000-0000-0000-000000000201"
+        private const val SECOND_EXPENSE_CATEGORY_ID = "00000000-0000-0000-0000-000000000202"
         private const val INCOME_CATEGORY_ID = "00000000-0000-0000-0000-000000000301"
     }
 }
