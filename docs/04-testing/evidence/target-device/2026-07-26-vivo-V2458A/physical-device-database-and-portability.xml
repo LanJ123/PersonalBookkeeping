@@ -1,0 +1,28 @@
+<?xml version='1.0' encoding='UTF-8' ?>
+<testsuites tests="11" failures="0" errors="0" skipped="0" time="1.675" timestamp="2026-07-26T03:36:14" hostname="localhost">
+  <testsuite name="com.personalbookkeeping.database.AppDatabaseTest" tests="7" failures="0" errors="0" skipped="0" time="0.323" timestamp="2026-07-26T03:36:14" hostname="localhost">
+    <properties>
+      <property name="device" value="V2458A - 16" />
+      <property name="flavor" value="" />
+      <property name="project" value=":app" />
+    </properties>
+    <testcase name="databaseTriggerRejectsInvalidTransferShape" classname="com.personalbookkeeping.database.AppDatabaseTest" time="0.07" />
+    <testcase name="accountAndCategoryManagementEnforcesNamesLastActiveAndSorting" classname="com.personalbookkeeping.database.AppDatabaseTest" time="0.054" />
+    <testcase name="seedAndTransactionsProduceDerivedBalances" classname="com.personalbookkeeping.database.AppDatabaseTest" time="0.028" />
+    <testcase name="deactivatedItemsLeaveNewOptionsButRemainVisibleInHistory" classname="com.personalbookkeeping.database.AppDatabaseTest" time="0.031" />
+    <testcase name="pagingCombinesFiltersEscapesWildcardsAndMatchesTransferBothSides" classname="com.personalbookkeeping.database.AppDatabaseTest" time="0.029" />
+    <testcase name="monthlyInsightsReconcileAndBudgetsCountOnlyExpenses" classname="com.personalbookkeeping.database.AppDatabaseTest" time="0.082" />
+    <testcase name="editDeleteAndRestoreReplaceBalanceEffectExactlyOnce" classname="com.personalbookkeeping.database.AppDatabaseTest" time="0.029" />
+  </testsuite>
+  <testsuite name="com.personalbookkeeping.database.PortabilityServiceTest" tests="4" failures="0" errors="0" skipped="0" time="0.144" timestamp="2026-07-26T03:36:14" hostname="localhost">
+    <properties>
+      <property name="device" value="V2458A - 16" />
+      <property name="flavor" value="" />
+      <property name="project" value=":app" />
+    </properties>
+    <testcase name="injectedRestoreFailureLeavesOriginalDatabaseUnchanged" classname="com.personalbookkeeping.database.PortabilityServiceTest" time="0.058" />
+    <testcase name="backupClearRestoreRoundTripAndRollbackSnapshot" classname="com.personalbookkeeping.database.PortabilityServiceTest" time="0.081" />
+    <testcase name="displayPreferencesPersistAndAreObserved" classname="com.personalbookkeeping.database.PortabilityServiceTest" time="0.001" />
+    <testcase name="csvQueryUsesInclusiveDateRangeAndAscendingRows" classname="com.personalbookkeeping.database.PortabilityServiceTest" time="0.004" />
+  </testsuite>
+</testsuites>

@@ -99,6 +99,8 @@
 | [I4 API 36 实际备份](04-testing/evidence/2026-07-23-i4-api36-smoke.pbk) | 保存可独立校验的真实 `.pbk` 冒烟产物 | 已归档 |
 | [I5 测试用例](04-testing/09-i5-test-cases.md) | 定义性能、可访问性、兼容性和候选审计 | v1.0；已执行 |
 | [I5 测试报告](04-testing/10-i5-test-report.md) | 保存 API 28/36、覆盖率、性能和发布门结论 | v1.0；本地门禁通过 |
+| [目标真机验证执行指南](04-testing/11-target-device-validation-guide.md) | 给出数据安全、自动化、P95、人工矩阵和证据归档步骤 | v1.0；vivo V2458A 阶段性执行 |
+| [目标真机测试报告](04-testing/12-target-device-test-report.md) | 记录 vivo V2458A 自动化、人工冒烟、SAF 与剩余门禁 | v0.2；功能自动化 16/16 |
 
 ## 05 发布候选
 

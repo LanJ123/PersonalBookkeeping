@@ -38,7 +38,23 @@ I5 完整工程门与性能任务：
 .\gradlew.bat :benchmark:connectedBenchmarkAndroidTest "-Pandroid.testInstrumentationRunnerArguments.class=com.personalbookkeeping.benchmark.StartupBenchmark,com.personalbookkeeping.benchmark.LedgerBenchmark"
 ```
 
-性能结果位于 `benchmark/build/outputs/connected_android_test_additional_output/`。模拟器结果只作趋势；正式 P95 必须在目标真机复跑。
+上述 AndroidX benchmark 命令用于模拟器趋势和兼容设备。模拟器结果只作趋势；正式 P95 必须在目标真机复跑。部分厂商 Android 16 ROM 会冻结后台 benchmark 进程或挂起 UiAutomation，目标真机使用主机驱动脚本：
+
+```powershell
+.\gradlew.bat :app:assembleBenchmark
+adb install -r -t -g .\app\build\outputs\apk\benchmark\app-benchmark.apk
+powershell.exe -NoProfile -ExecutionPolicy Bypass -File .\scripts\run-target-device-benchmarks.ps1 `
+  -Serial "$env:ANDROID_SERIAL" -Iterations 30 -OutputDirectory ".\benchmark\build\host-benchmark\target-device"
+```
+
+目标真机性能完成后验证：
+
+```powershell
+powershell.exe -NoProfile -ExecutionPolicy Bypass -File .\scripts\verify-target-device-benchmarks.ps1 `
+  -InputDirectory ".\benchmark\build\host-benchmark\target-device"
+```
+
+运行脚本使用持久 ADB shell 驱动真实 UI，并通过 benchmark-only 文件信号结束计时；验证脚本只接受真机、每项至少 30 个样本，并对四项 P95 门槛给出非零失败码。完整操作、无线安装替代方式和数据清空警告见[目标真机验证执行指南](../04-testing/11-target-device-validation-guide.md)。
 
 安装到已启动模拟器：
 

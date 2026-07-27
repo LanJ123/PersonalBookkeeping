@@ -1,0 +1,15 @@
+<?xml version='1.0' encoding='UTF-8' ?>
+<testsuites tests="5" failures="0" errors="0" skipped="0" time="52.706" timestamp="2026-07-26T06:09:42" hostname="localhost">
+  <testsuite name="com.personalbookkeeping.ui.physical.PhysicalDeviceComposeUiTest" tests="5" failures="0" errors="0" skipped="0" time="37.072" timestamp="2026-07-26T06:09:42" hostname="localhost">
+    <properties>
+      <property name="device" value="V2458A - 16" />
+      <property name="flavor" value="" />
+      <property name="project" value=":app" />
+    </properties>
+    <testcase name="privacyControlsReflectChangesImmediately" classname="com.personalbookkeeping.ui.physical.PhysicalDeviceComposeUiTest" time="6.628" />
+    <testcase name="rootNavigationReachesEveryComposeScreen" classname="com.personalbookkeeping.ui.physical.PhysicalDeviceComposeUiTest" time="6.773" />
+    <testcase name="systemDocumentPickerLaunchesAndReturnsToComposeScreen" classname="com.personalbookkeeping.ui.physical.PhysicalDeviceComposeUiTest" time="7.844" />
+    <testcase name="backupWarningCanBeCancelledWithoutLeavingScreen" classname="com.personalbookkeeping.ui.physical.PhysicalDeviceComposeUiTest" time="7.924" />
+    <testcase name="transactionEditorSavesAndShowsFeedback" classname="com.personalbookkeeping.ui.physical.PhysicalDeviceComposeUiTest" time="7.903" />
+  </testsuite>
+</testsuites>

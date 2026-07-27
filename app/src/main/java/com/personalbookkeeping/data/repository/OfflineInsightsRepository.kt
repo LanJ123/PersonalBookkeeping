@@ -12,14 +12,22 @@ import com.personalbookkeeping.domain.model.CategoryKind
 import com.personalbookkeeping.domain.model.CategoryOption
 import com.personalbookkeeping.domain.model.CategorySpending
 import com.personalbookkeeping.domain.model.DailyTrend
+import com.personalbookkeeping.domain.model.HomeOverview
 import com.personalbookkeeping.domain.model.MonthPeriod
 import com.personalbookkeeping.domain.model.MonthlyInsights
 import com.personalbookkeeping.domain.model.MonthlySummary
+import com.personalbookkeeping.domain.model.PeriodExpenseComparison
 import com.personalbookkeeping.domain.model.RecentTransaction
+import com.personalbookkeeping.domain.model.StatisticsGranularity
+import com.personalbookkeeping.domain.model.StatisticsInsights
+import com.personalbookkeeping.domain.model.StatisticsPeriod
+import com.personalbookkeeping.domain.model.StatisticsTrendPoint
 import com.personalbookkeeping.domain.model.TransactionType
 import com.personalbookkeeping.domain.repository.InsightsRepository
 import com.personalbookkeeping.domain.usecase.CreateTransactionUseCase
 import java.time.Instant
+import java.time.LocalDate
+import java.time.ZoneId
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.combine
 
@@ -29,6 +37,50 @@ class OfflineInsightsRepository(
     private val idGenerator: IdGenerator,
 ) : InsightsRepository {
     private val ledgerId = CreateTransactionUseCase.DEFAULT_LEDGER_ID
+
+    override fun observeHome(period: MonthPeriod, todayEpochDay: Long): Flow<HomeOverview> =
+        combine(
+            database.insightsDao().observeMonthlySummary(
+                ledgerId,
+                period.startEpochDay,
+                period.endExclusiveEpochDay,
+            ),
+            database.insightsDao().observeMonthlySummary(
+                ledgerId,
+                todayEpochDay,
+                todayEpochDay + 1,
+            ),
+            database.insightsDao().observeRecentInPeriod(
+                ledgerId,
+                period.startEpochDay,
+                period.endExclusiveEpochDay,
+                Int.MAX_VALUE,
+            ),
+        ) { month, today, transactionRows ->
+            HomeOverview(
+                period = period,
+                summary = MonthlySummary(
+                    income = Money.fromMinor(month.incomeMinor),
+                    expense = Money.fromMinor(month.expenseMinor),
+                    balance = Money.fromMinor(month.incomeMinor - month.expenseMinor),
+                    transactionCount = month.transactionCount,
+                ),
+                todayExpense = Money.fromMinor(today.expenseMinor),
+                transactions = transactionRows.map {
+                    RecentTransaction(
+                        id = it.id,
+                        type = TransactionType.valueOf(it.type),
+                        amount = Money.fromMinor(it.amountMinor),
+                        categoryName = it.categoryName,
+                        accountName = it.accountName,
+                        targetAccountName = it.targetAccountName,
+                        occurredAt = Instant.ofEpochMilli(it.occurredAtMs),
+                        zoneId = ZoneId.of(it.zoneId),
+                        localDateEpochDay = it.localDateEpochDay,
+                    )
+                },
+            )
+        }
 
     override fun observeInsights(period: MonthPeriod): Flow<MonthlyInsights> {
         val dao = database.insightsDao()
@@ -53,7 +105,12 @@ class OfflineInsightsRepository(
                 transactionCount = summaryRow.transactionCount,
             )
             val categorySpending = categoryRows.map {
-                CategorySpending(it.categoryId, it.categoryName, Money.fromMinor(it.amountMinor))
+                CategorySpending(
+                    it.categoryId,
+                    it.categoryName,
+                    Money.fromMinor(it.amountMinor),
+                    it.transactionCount,
+                )
             }
             val spendingByCategory = categorySpending.associate { it.categoryId to it.amount.minorUnits }
             MonthlyInsights(
@@ -72,6 +129,8 @@ class OfflineInsightsRepository(
                         accountName = it.accountName,
                         targetAccountName = it.targetAccountName,
                         occurredAt = Instant.ofEpochMilli(it.occurredAtMs),
+                        zoneId = ZoneId.of(it.zoneId),
+                        localDateEpochDay = it.localDateEpochDay,
                     )
                 },
                 totalBudget = budgetRows.firstOrNull { it.scopeKey == TOTAL_SCOPE }
@@ -81,6 +140,95 @@ class OfflineInsightsRepository(
                 },
                 expenseCategories = optionRows.filter { it.kind == CategoryKind.EXPENSE.name }.map {
                     CategoryOption(it.id, it.name, CategoryKind.EXPENSE)
+                },
+            )
+        }
+    }
+
+    override fun observeStatistics(period: StatisticsPeriod): Flow<StatisticsInsights> {
+        val dao = database.insightsDao()
+        val categoryComposition = combine(
+            dao.observeCategoryComposition(
+                ledgerId,
+                TransactionType.EXPENSE.name,
+                period.startEpochDay,
+                period.endExclusiveEpochDay,
+            ),
+            dao.observeCategoryComposition(
+                ledgerId,
+                TransactionType.INCOME.name,
+                period.startEpochDay,
+                period.endExclusiveEpochDay,
+            ),
+        ) { expenses, incomes -> expenses to incomes }
+        val currentPeriod = combine(
+            dao.observeMonthlySummary(ledgerId, period.startEpochDay, period.endExclusiveEpochDay),
+            categoryComposition,
+            dao.observeDailyTrend(ledgerId, period.startEpochDay, period.endExclusiveEpochDay),
+        ) { summary, categories, trend -> Triple(summary, categories, trend) }
+        val comparisonPeriods = period.comparisonPeriods()
+        val comparisonTrend = dao.observeDailyTrend(
+            ledgerId,
+            comparisonPeriods.first().startEpochDay,
+            period.endExclusiveEpochDay,
+        )
+
+        return combine(currentPeriod, comparisonTrend) { current, comparisonDaily ->
+            val (summaryRow, categoryRows, dailyRows) = current
+            val (expenseCategoryRows, incomeCategoryRows) = categoryRows
+            val summary = MonthlySummary(
+                income = Money.fromMinor(summaryRow.incomeMinor),
+                expense = Money.fromMinor(summaryRow.expenseMinor),
+                balance = Money.fromMinor(summaryRow.incomeMinor - summaryRow.expenseMinor),
+                transactionCount = summaryRow.transactionCount,
+            )
+            StatisticsInsights(
+                period = period,
+                summary = summary,
+                averageDailyExpense = Money.fromMinor(
+                    summary.expense.minorUnits / period.averageDayCount(
+                        clock.now().atZone(ZoneId.systemDefault()).toLocalDate(),
+                    ),
+                ),
+                averageDailyIncome = Money.fromMinor(
+                    summary.income.minorUnits / period.averageDayCount(
+                        clock.now().atZone(ZoneId.systemDefault()).toLocalDate(),
+                    ),
+                ),
+                categories = expenseCategoryRows.map {
+                    CategorySpending(
+                        it.categoryId,
+                        it.categoryName,
+                        Money.fromMinor(it.amountMinor),
+                        it.transactionCount,
+                    )
+                },
+                incomeCategories = incomeCategoryRows.map {
+                    CategorySpending(
+                        it.categoryId,
+                        it.categoryName,
+                        Money.fromMinor(it.amountMinor),
+                        it.transactionCount,
+                    )
+                },
+                trend = buildTrend(
+                    period,
+                    dailyRows.associate {
+                        it.localDateEpochDay to (it.incomeMinor to it.expenseMinor)
+                    },
+                ),
+                comparisons = comparisonPeriods.map { comparison ->
+                    val comparisonRows = comparisonDaily.asSequence().filter {
+                        it.localDateEpochDay >= comparison.startEpochDay &&
+                            it.localDateEpochDay < comparison.endExclusiveEpochDay
+                    }.toList()
+                    PeriodExpenseComparison(
+                        label = comparison.shortLabel(),
+                        expense = Money.fromMinor(
+                            comparisonRows.sumOf { it.expenseMinor },
+                        ),
+                        income = Money.fromMinor(comparisonRows.sumOf { it.incomeMinor }),
+                    )
                 },
             )
         }
@@ -124,6 +272,52 @@ class OfflineInsightsRepository(
     )
 
     private fun scopeKey(categoryId: String?) = categoryId?.let { "CATEGORY:$it" } ?: TOTAL_SCOPE
+
+    private fun buildTrend(
+        period: StatisticsPeriod,
+        amountsByDay: Map<Long, Pair<Long, Long>>,
+    ): List<StatisticsTrendPoint> = when (period.granularity) {
+        StatisticsGranularity.WEEK,
+        StatisticsGranularity.MONTH,
+        -> (period.startEpochDay until period.endExclusiveEpochDay).map { epochDay ->
+            val date = LocalDate.ofEpochDay(epochDay)
+            val amounts = amountsByDay[epochDay] ?: (0L to 0L)
+            StatisticsTrendPoint(
+                label = if (period.granularity == StatisticsGranularity.WEEK) {
+                    "周${"一二三四五六日"[date.dayOfWeek.value - 1]}"
+                } else {
+                    "${date.dayOfMonth}日"
+                },
+                income = Money.fromMinor(amounts.first),
+                expense = Money.fromMinor(amounts.second),
+            )
+        }
+
+        StatisticsGranularity.YEAR -> (1..12).map { month ->
+            val start = LocalDate.of(period.startDate.year, month, 1)
+            val end = start.plusMonths(1)
+            val matching = amountsByDay.asSequence().filter { (epochDay, _) ->
+                epochDay >= start.toEpochDay() && epochDay < end.toEpochDay()
+            }
+            var income = 0L
+            var expense = 0L
+            matching.forEach { (_, amounts) ->
+                income += amounts.first
+                expense += amounts.second
+            }
+            StatisticsTrendPoint(
+                label = "${month}月",
+                income = Money.fromMinor(income),
+                expense = Money.fromMinor(expense),
+            )
+        }
+    }
+
+    private fun StatisticsPeriod.shortLabel(): String = when (granularity) {
+        StatisticsGranularity.WEEK -> "${startDate.monthValue}/${startDate.dayOfMonth}"
+        StatisticsGranularity.MONTH -> "${startDate.monthValue}月"
+        StatisticsGranularity.YEAR -> startDate.year.toString()
+    }
 
     companion object {
         private const val TOTAL_SCOPE = "TOTAL"

@@ -17,6 +17,8 @@ import com.personalbookkeeping.domain.model.MoveDirection
 import com.personalbookkeeping.domain.model.TransactionType
 import com.personalbookkeeping.domain.model.MonthPeriod
 import com.personalbookkeeping.domain.model.BudgetStatus
+import com.personalbookkeeping.domain.model.StatisticsGranularity
+import com.personalbookkeeping.domain.model.StatisticsPeriod
 import com.personalbookkeeping.common.Money
 import androidx.paging.PagingSource
 import kotlinx.coroutines.flow.first
@@ -200,6 +202,16 @@ class AppDatabaseTest {
         assertEquals(BudgetStatus.NEAR_LIMIT, insights.totalBudget?.status)
         assertEquals(7_000L, insights.categoryBudgets.single().used.minorUnits)
         assertEquals(BudgetStatus.NEAR_LIMIT, insights.categoryBudgets.single().status)
+
+        val home = repository.observeHome(period, LocalDate.of(2026, 7, 22).toEpochDay()).first()
+        assertEquals(4, home.transactions.size)
+
+        val statistics = repository.observeStatistics(
+            StatisticsPeriod.from(StatisticsGranularity.MONTH, LocalDate.of(2026, 7, 22)),
+        ).first()
+        assertEquals(2, statistics.categories.sumOf { it.transactionCount })
+        assertEquals(1, statistics.incomeCategories.sumOf { it.transactionCount })
+        assertEquals(20_000L, statistics.incomeCategories.sumOf { it.amount.minorUnits })
 
         repository.setBudget(period, null, Money.fromMinor(7_000))
         assertEquals(BudgetStatus.EXCEEDED, repository.observeInsights(period).first().totalBudget?.status)

@@ -66,4 +66,4 @@ API 37 只在资源允许时补做 I5 前向兼容检查，不影响任一迭代
 
 2026-07-23 本地工程门已通过：JVM 40/40；API 28 与 API 36 各 24/24；核心行覆盖率 93.75%、分支覆盖率 81.60%；Debug/Release/AAB/benchmark、R8、Lint、Manifest、Baseline Profile 和模拟器性能采集链路均通过。详细证据见 [I5 测试报告](../04-testing/10-i5-test-report.md)。
 
-I5 标记为“工程硬化完成、外部发布门待验证”。正式签名、目标真机 P95、TalkBack、锁屏、SAF、飞行模式和厂商 ROM 检查未以 Debug 密钥或模拟器结果代替。
+I5 标记为“工程硬化完成、外部发布门待验证”。目标真机 P95、SAF、TalkBack 与系统应用锁已在 vivo V2458A 完成；正式签名、飞行模式和剩余厂商 ROM 检查未以 Debug 密钥或模拟器结果代替。

@@ -6,8 +6,15 @@ import androidx.lifecycle.viewModelScope
 import com.personalbookkeeping.common.MoneyParseFailure
 import com.personalbookkeeping.common.MoneyParseResult
 import com.personalbookkeeping.common.MoneyParser
+import com.personalbookkeeping.common.Money
 import com.personalbookkeeping.domain.model.MonthPeriod
 import com.personalbookkeeping.domain.model.MonthlyInsights
+import com.personalbookkeeping.domain.model.MonthlySummary
+import com.personalbookkeeping.domain.model.RecentTransaction
+import com.personalbookkeeping.domain.model.StatisticsGranularity
+import com.personalbookkeeping.domain.model.StatisticsInsights
+import com.personalbookkeeping.domain.model.StatisticsPeriod
+import com.personalbookkeeping.domain.model.TransactionType
 import com.personalbookkeeping.domain.repository.InsightsRepository
 import java.time.LocalDate
 import kotlinx.coroutines.ExperimentalCoroutinesApi
@@ -26,14 +33,42 @@ data class InsightsUiState(
     val message: String? = null,
 )
 
+data class HomeUiState(
+    val period: MonthPeriod,
+    val summary: MonthlySummary = MonthlyInsights.empty(period).summary,
+    val todayExpense: Money = Money.fromMinor(0),
+    val transactions: List<RecentTransaction> = emptyList(),
+    val isLoading: Boolean = true,
+    val message: String? = null,
+)
+
+data class StatisticsUiState(
+    val period: StatisticsPeriod,
+    val insights: StatisticsInsights = StatisticsInsights.empty(period),
+    val type: TransactionType = TransactionType.EXPENSE,
+    val isLoading: Boolean = true,
+    val message: String? = null,
+)
+
 @OptIn(ExperimentalCoroutinesApi::class)
 class InsightsViewModel(
     private val repository: InsightsRepository,
-    initialPeriod: MonthPeriod = MonthPeriod.from(LocalDate.now()),
+    initialDate: LocalDate = LocalDate.now(),
 ) : ViewModel() {
-    private val selectedPeriod = MutableStateFlow(initialPeriod)
-    private val mutableState = MutableStateFlow(InsightsUiState(initialPeriod))
+    private val homeDate = initialDate
+    private val homePeriod = MonthPeriod.from(initialDate)
+    private val selectedPeriod = MutableStateFlow(homePeriod)
+    private val selectedStatisticsPeriod = MutableStateFlow(
+        StatisticsPeriod.from(StatisticsGranularity.MONTH, initialDate),
+    )
+    private val mutableState = MutableStateFlow(InsightsUiState(homePeriod))
     val state: StateFlow<InsightsUiState> = mutableState.asStateFlow()
+    private val mutableHomeState = MutableStateFlow(HomeUiState(homePeriod))
+    val homeState: StateFlow<HomeUiState> = mutableHomeState.asStateFlow()
+    private val mutableStatisticsState = MutableStateFlow(
+        StatisticsUiState(selectedStatisticsPeriod.value),
+    )
+    val statisticsState: StateFlow<StatisticsUiState> = mutableStatisticsState.asStateFlow()
 
     init {
         viewModelScope.launch {
@@ -48,12 +83,67 @@ class InsightsViewModel(
                 mutableState.update { it.copy(period = insights.period, insights = insights, isLoading = false) }
             }
         }
+        viewModelScope.launch {
+            repository.observeHome(homePeriod, homeDate.toEpochDay()).catch {
+                mutableHomeState.update {
+                    it.copy(isLoading = false, message = "首页数据加载失败，请重试")
+                }
+            }.collect { overview ->
+                mutableHomeState.update {
+                    it.copy(
+                        period = homePeriod,
+                        summary = overview.summary,
+                        todayExpense = overview.todayExpense,
+                        transactions = overview.transactions,
+                        isLoading = false,
+                        message = null,
+                    )
+                }
+            }
+        }
+        viewModelScope.launch {
+            selectedStatisticsPeriod.flatMapLatest { period ->
+                mutableStatisticsState.update { it.copy(period = period, isLoading = true, message = null) }
+                repository.observeStatistics(period).catch {
+                    mutableStatisticsState.update {
+                        it.copy(isLoading = false, message = "统计数据加载失败，请重试")
+                    }
+                }
+            }.collect { insights ->
+                mutableStatisticsState.update {
+                    it.copy(
+                        period = insights.period,
+                        insights = insights,
+                        isLoading = false,
+                        message = null,
+                    )
+                }
+            }
+        }
     }
 
     fun previousMonth() = select(selectedPeriod.value.previous())
     fun nextMonth() = select(selectedPeriod.value.next())
     fun select(period: MonthPeriod) {
         selectedPeriod.value = period
+    }
+
+    fun selectStatisticsGranularity(granularity: StatisticsGranularity) {
+        selectedStatisticsPeriod.value = selectedStatisticsPeriod.value.withGranularity(granularity)
+    }
+
+    fun selectStatisticsType(type: TransactionType) {
+        if (type == TransactionType.EXPENSE || type == TransactionType.INCOME) {
+            mutableStatisticsState.update { it.copy(type = type) }
+        }
+    }
+
+    fun previousStatisticsPeriod() {
+        selectedStatisticsPeriod.value = selectedStatisticsPeriod.value.previous()
+    }
+
+    fun nextStatisticsPeriod() {
+        selectedStatisticsPeriod.value = selectedStatisticsPeriod.value.next()
     }
 
     fun saveBudget(categoryId: String?, amountText: String): Boolean {

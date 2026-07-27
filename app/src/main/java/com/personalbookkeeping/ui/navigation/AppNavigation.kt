@@ -20,10 +20,14 @@ import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.semantics.clearAndSetSemantics
+import androidx.compose.ui.semantics.semantics
+import androidx.compose.ui.semantics.testTagsAsResourceId
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
@@ -74,13 +78,18 @@ sealed interface AppNavKey : NavKey
 @Serializable data object DataTransferKey : AppNavKey
 @Serializable data object PrivacyKey : AppNavKey
 
-private data class RootTab(val key: AppNavKey, val glyph: String, val label: String)
+private data class RootTab(
+    val key: AppNavKey,
+    val glyph: String,
+    val label: String,
+    val testTag: String,
+)
 
 private val rootTabs = listOf(
-    RootTab(HomeKey, "⌂", "首页"),
-    RootTab(LedgerKey, "≡", "流水"),
-    RootTab(StatisticsKey, "◔", "统计"),
-    RootTab(SettingsKey, "⚙", "设置"),
+    RootTab(HomeKey, "⌂", "首页", "root-tab-home"),
+    RootTab(LedgerKey, "≡", "流水", "root-tab-ledger"),
+    RootTab(StatisticsKey, "◔", "统计", "root-tab-statistics"),
+    RootTab(SettingsKey, "⚙", "设置", "root-tab-settings"),
 )
 
 @Composable
@@ -92,6 +101,13 @@ fun BookkeepingApp(
     themeMode: ThemeMode,
     onAppLockChanged: (Boolean) -> Unit,
 ) {
+    // NavDisplay keeps NavEntry content alive while it remains on the back stack.
+    // Keep mutable settings behind State objects so cached entries never render
+    // the values that were captured when the destination was first created.
+    val currentAppLockEnabled = rememberUpdatedState(appLockEnabled)
+    val currentAppLockMessage = rememberUpdatedState(appLockMessage)
+    val currentAmountsHidden = rememberUpdatedState(amountsHidden)
+    val currentThemeMode = rememberUpdatedState(themeMode)
     val backStack = rememberNavBackStack(HomeKey)
     val ledgerViewModel: LedgerViewModel = viewModel(
         factory = LedgerViewModelFactory(container.ledgerRepository, container.transactionRepository),
@@ -108,13 +124,20 @@ fun BookkeepingApp(
     val ledgerState by ledgerViewModel.state.collectAsStateWithLifecycle()
     val managementState by managementViewModel.state.collectAsStateWithLifecycle()
     val insightsState by insightsViewModel.state.collectAsStateWithLifecycle()
+    val homeState by insightsViewModel.homeState.collectAsStateWithLifecycle()
+    val statisticsState by insightsViewModel.statisticsState.collectAsStateWithLifecycle()
     val settingsState by settingsViewModel.state.collectAsStateWithLifecycle()
+    val currentLedgerState = rememberUpdatedState(ledgerState)
+    val currentManagementState = rememberUpdatedState(managementState)
+    val currentInsightsState = rememberUpdatedState(insightsState)
+    val currentHomeState = rememberUpdatedState(homeState)
+    val currentStatisticsState = rememberUpdatedState(statisticsState)
+    val currentSettingsState = rememberUpdatedState(settingsState)
     val current = backStack.lastOrNull()
     val isRoot = rootTabs.any { it.key == current }
     val ledgerSnackbar = remember { SnackbarHostState() }
     val accountSnackbar = remember { SnackbarHostState() }
     val categorySnackbar = remember { SnackbarHostState() }
-    val homeSnackbar = remember { SnackbarHostState() }
     val budgetSnackbar = remember { SnackbarHostState() }
 
     fun openEditor(id: String? = null) {
@@ -127,10 +150,12 @@ fun BookkeepingApp(
     }
 
     Scaffold(
+        modifier = Modifier.semantics { testTagsAsResourceId = true },
         bottomBar = {
             if (isRoot) NavigationBar {
                 rootTabs.forEach { tab ->
                     NavigationBarItem(
+                        modifier = Modifier.testTag(tab.testTag),
                         selected = current == tab.key,
                         onClick = { switchRoot(tab.key) },
                         icon = { Text(tab.glyph, Modifier.clearAndSetSemantics { }) },
@@ -140,7 +165,12 @@ fun BookkeepingApp(
             }
         },
         floatingActionButton = {
-            if (isRoot) FloatingActionButton(onClick = { openEditor() }) { Text("＋记一笔") }
+            if (isRoot) {
+                FloatingActionButton(
+                    onClick = { openEditor() },
+                    modifier = Modifier.testTag("root-add-transaction"),
+                ) { Text("＋记一笔") }
+            }
         },
     ) { outerPadding ->
         NavDisplay(
@@ -151,23 +181,14 @@ fun BookkeepingApp(
                 when (key) {
                     HomeKey -> NavEntry(key) {
                         HomeScreen(
-                            state = insightsState,
-                            snackbarHostState = homeSnackbar,
-                            onPreviousMonth = insightsViewModel::previousMonth,
-                            onNextMonth = insightsViewModel::nextMonth,
-                            onViewAll = { period ->
-                                ledgerViewModel.showMonth(period)
-                                switchRoot(LedgerKey)
-                            },
+                            state = currentHomeState.value,
                             onTransactionClick = { backStack.add(TransactionDetailKey(it)) },
-                            onBudgets = { backStack.add(BudgetsKey) },
-                            onMessageConsumed = insightsViewModel::consumeMessage,
                         )
                     }
                     LedgerKey -> NavEntry(key) {
                         val transactions = ledgerViewModel.transactions.collectAsLazyPagingItems()
                         LedgerScreen(
-                            state = ledgerState,
+                            state = currentLedgerState.value,
                             transactions = transactions,
                             snackbarHostState = ledgerSnackbar,
                             onQueryChanged = ledgerViewModel::setNoteQuery,
@@ -175,6 +196,10 @@ fun BookkeepingApp(
                             onAccountChanged = ledgerViewModel::setAccount,
                             onCategoryChanged = ledgerViewModel::setCategory,
                             onDateChanged = ledgerViewModel::setDateRange,
+                            onMonthSelected = ledgerViewModel::selectMonth,
+                            onPreviousMonth = ledgerViewModel::previousMonth,
+                            onNextMonth = ledgerViewModel::nextMonth,
+                            onClearMonth = ledgerViewModel::clearMonth,
                             onClearFilters = ledgerViewModel::clearFilters,
                             onTransactionClick = { backStack.add(TransactionDetailKey(it)) },
                             onRestore = ledgerViewModel::restoreLastDeleted,
@@ -184,11 +209,13 @@ fun BookkeepingApp(
                     }
                     StatisticsKey -> NavEntry(key) {
                         StatisticsScreen(
-                            state = insightsState,
-                            onPreviousMonth = insightsViewModel::previousMonth,
-                            onNextMonth = insightsViewModel::nextMonth,
-                            onCategoryClick = { period, categoryId ->
-                                ledgerViewModel.showMonth(period, categoryId)
+                            state = currentStatisticsState.value,
+                            onGranularitySelected = insightsViewModel::selectStatisticsGranularity,
+                            onTypeSelected = insightsViewModel::selectStatisticsType,
+                            onPreviousPeriod = insightsViewModel::previousStatisticsPeriod,
+                            onNextPeriod = insightsViewModel::nextStatisticsPeriod,
+                            onCategoryClick = { period, type, categoryId ->
+                                ledgerViewModel.showStatistics(period, type, categoryId)
                                 switchRoot(LedgerKey)
                             },
                         )
@@ -204,7 +231,7 @@ fun BookkeepingApp(
                     }
                     DataTransferKey -> NavEntry(key) {
                         DataTransferScreen(
-                            state = settingsState,
+                            state = currentSettingsState.value,
                             onBack = { backStack.removeLastOrNull() },
                             onBackup = settingsViewModel::createBackup,
                             onRestoreSelected = settingsViewModel::inspectBackup,
@@ -216,10 +243,10 @@ fun BookkeepingApp(
                     }
                     PrivacyKey -> NavEntry(key) {
                         PrivacySettingsScreen(
-                            amountsHidden = amountsHidden,
-                            themeMode = themeMode,
-                            appLockEnabled = appLockEnabled,
-                            appLockMessage = appLockMessage,
+                            amountsHidden = currentAmountsHidden.value,
+                            themeMode = currentThemeMode.value,
+                            appLockEnabled = currentAppLockEnabled.value,
+                            appLockMessage = currentAppLockMessage.value,
                             onBack = { backStack.removeLastOrNull() },
                             onAmountsHiddenChanged = settingsViewModel::setHideAmounts,
                             onThemeModeChanged = settingsViewModel::setThemeMode,
@@ -228,7 +255,7 @@ fun BookkeepingApp(
                     }
                     BudgetsKey -> NavEntry(key) {
                         BudgetsScreen(
-                            state = insightsState,
+                            state = currentInsightsState.value,
                             snackbarHostState = budgetSnackbar,
                             onBack = { backStack.removeLastOrNull() },
                             onPreviousMonth = insightsViewModel::previousMonth,
@@ -240,7 +267,7 @@ fun BookkeepingApp(
                     }
                     AccountsKey -> NavEntry(key) {
                         AccountsScreen(
-                            state = managementState,
+                            state = currentManagementState.value,
                             snackbarHostState = accountSnackbar,
                             onBack = { backStack.removeLastOrNull() },
                             onSave = managementViewModel::saveAccount,
@@ -251,7 +278,7 @@ fun BookkeepingApp(
                     }
                     CategoriesKey -> NavEntry(key) {
                         CategoriesScreen(
-                            state = managementState,
+                            state = currentManagementState.value,
                             snackbarHostState = categorySnackbar,
                             onBack = { backStack.removeLastOrNull() },
                             onSave = managementViewModel::saveCategory,
@@ -296,6 +323,8 @@ fun BookkeepingApp(
                             onAccountSelected = editorViewModel::onAccountSelected,
                             onTargetAccountSelected = editorViewModel::onTargetAccountSelected,
                             onCategorySelected = editorViewModel::onCategorySelected,
+                            onDateSelected = editorViewModel::onDateSelected,
+                            onTimeSelected = editorViewModel::onTimeSelected,
                             onSave = editorViewModel::save,
                             onBack = { backStack.removeLastOrNull() },
                         )

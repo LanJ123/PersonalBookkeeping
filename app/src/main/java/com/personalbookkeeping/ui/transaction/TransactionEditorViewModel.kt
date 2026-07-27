@@ -3,11 +3,12 @@ package com.personalbookkeeping.ui.transaction
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.viewModelScope
+import com.personalbookkeeping.common.AppClock
 import com.personalbookkeeping.common.MoneyParseFailure
+import com.personalbookkeeping.common.SystemAppClock
 import com.personalbookkeeping.domain.model.AccountOption
 import com.personalbookkeeping.domain.model.CategoryKind
 import com.personalbookkeeping.domain.model.CategoryOption
-import com.personalbookkeeping.domain.model.RecentTransaction
 import com.personalbookkeeping.domain.model.TransactionType
 import com.personalbookkeeping.domain.repository.TransactionRepository
 import com.personalbookkeeping.domain.repository.LedgerRepository
@@ -18,6 +19,11 @@ import com.personalbookkeeping.domain.usecase.UpdateTransactionCommand
 import com.personalbookkeeping.domain.usecase.UpdateTransactionResult
 import com.personalbookkeeping.domain.usecase.UpdateTransactionUseCase
 import com.personalbookkeeping.domain.validation.TransactionValidationError
+import java.time.Instant
+import java.time.LocalDate
+import java.time.LocalDateTime
+import java.time.LocalTime
+import java.time.ZoneId
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -46,8 +52,9 @@ data class TransactionEditorUiState(
     val amountError: MoneyParseFailure? = null,
     val validationErrors: Set<TransactionValidationError> = emptySet(),
     val saveStatus: SaveStatus = SaveStatus.IDLE,
-    val recentTransactions: List<RecentTransaction> = emptyList(),
     val isEditing: Boolean = false,
+    val occurredAt: Instant = Instant.now(),
+    val zoneId: ZoneId = ZoneId.systemDefault(),
 ) {
     val visibleCategories: List<CategoryOption>
         get() {
@@ -66,8 +73,15 @@ class TransactionEditorViewModel(
     private val repository: TransactionRepository,
     private val ledgerRepository: LedgerRepository,
     private val transactionId: String?,
+    private val clock: AppClock = SystemAppClock,
+    private val zoneIdProvider: () -> ZoneId = ZoneId::systemDefault,
 ) : ViewModel() {
-    private val mutableState = MutableStateFlow(TransactionEditorUiState())
+    private val mutableState = MutableStateFlow(
+        TransactionEditorUiState(
+            occurredAt = clock.now(),
+            zoneId = zoneIdProvider(),
+        ),
+    )
     val state: StateFlow<TransactionEditorUiState> = mutableState.asStateFlow()
 
     init {
@@ -76,10 +90,9 @@ class TransactionEditorViewModel(
                 repository.initialize()
                 combine(
                     repository.observeEditorOptions(),
-                    repository.observeRecentTransactions(),
                     transactionId?.let(ledgerRepository::observeTransaction) ?: flowOf(null),
-                ) { options, recent, record -> Triple(options, recent, record) }
-                    .collect { (options, recent, record) ->
+                ) { options, record -> options to record }
+                    .collect { (options, record) ->
                         mutableState.update { current ->
                             val accounts = options.accounts.toMutableList().apply {
                                 if (record != null && none { it.id == record.accountId }) {
@@ -104,7 +117,6 @@ class TransactionEditorViewModel(
                                 isLoading = false,
                                 accounts = accounts,
                                 categories = categories,
-                                recentTransactions = recent,
                                 isEditing = transactionId != null,
                             )
                             if (record != null && !editRecordLoaded) {
@@ -116,6 +128,8 @@ class TransactionEditorViewModel(
                                     selectedAccountId = record.accountId,
                                     selectedTargetAccountId = record.targetAccountId,
                                     selectedCategoryId = record.categoryId,
+                                    occurredAt = record.occurredAt,
+                                    zoneId = record.zoneId,
                                 )
                             } else {
                                 base.withValidSelections()
@@ -190,6 +204,32 @@ class TransactionEditorViewModel(
         }
     }
 
+    fun onDateSelected(epochDay: Long) {
+        val selectedDate = runCatching { LocalDate.ofEpochDay(epochDay) }.getOrNull() ?: return
+        mutableState.update { current ->
+            val localTime = current.occurredAt.atZone(current.zoneId).toLocalTime()
+            current.copy(
+                occurredAt = LocalDateTime.of(selectedDate, localTime)
+                    .atZone(current.zoneId)
+                    .toInstant(),
+                saveStatus = SaveStatus.IDLE,
+            )
+        }
+    }
+
+    fun onTimeSelected(hour: Int, minute: Int) {
+        val selectedTime = runCatching { LocalTime.of(hour, minute) }.getOrNull() ?: return
+        mutableState.update { current ->
+            val localDate = current.occurredAt.atZone(current.zoneId).toLocalDate()
+            current.copy(
+                occurredAt = LocalDateTime.of(localDate, selectedTime)
+                    .atZone(current.zoneId)
+                    .toInstant(),
+                saveStatus = SaveStatus.IDLE,
+            )
+        }
+    }
+
     fun save() {
         val snapshot = mutableState.value
         if (snapshot.isSaving) return
@@ -212,6 +252,8 @@ class TransactionEditorViewModel(
                             accountId = snapshot.selectedAccountId,
                             targetAccountId = snapshot.selectedTargetAccountId,
                             note = snapshot.note,
+                            occurredAt = snapshot.occurredAt,
+                            zoneId = snapshot.zoneId,
                         ),
                     )) {
                     is CreateTransactionResult.InvalidAmount -> mutableState.update {
@@ -230,6 +272,8 @@ class TransactionEditorViewModel(
                             amountError = null,
                             validationErrors = emptySet(),
                             saveStatus = SaveStatus.SAVED,
+                            occurredAt = clock.now(),
+                            zoneId = zoneIdProvider(),
                         )
                     }
                     }
@@ -243,6 +287,8 @@ class TransactionEditorViewModel(
                             accountId = snapshot.selectedAccountId,
                             targetAccountId = snapshot.selectedTargetAccountId,
                             note = snapshot.note,
+                            occurredAt = snapshot.occurredAt,
+                            zoneId = snapshot.zoneId,
                         ),
                     )) {
                         is UpdateTransactionResult.InvalidAmount -> mutableState.update {
@@ -298,6 +344,8 @@ class TransactionEditorViewModelFactory(
     private val repository: TransactionRepository,
     private val ledgerRepository: LedgerRepository,
     private val transactionId: String? = null,
+    private val clock: AppClock = SystemAppClock,
+    private val zoneIdProvider: () -> ZoneId = ZoneId::systemDefault,
 ) : ViewModelProvider.Factory {
     @Suppress("UNCHECKED_CAST")
     override fun <T : ViewModel> create(modelClass: Class<T>): T {
@@ -308,6 +356,8 @@ class TransactionEditorViewModelFactory(
             repository,
             ledgerRepository,
             transactionId,
+            clock,
+            zoneIdProvider,
         ) as T
     }
 }

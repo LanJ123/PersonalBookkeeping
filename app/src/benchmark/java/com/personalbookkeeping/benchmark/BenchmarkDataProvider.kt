@@ -20,10 +20,24 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.runBlocking
 
 class BenchmarkDataProvider : ContentProvider() {
-    override fun onCreate(): Boolean = true
+    override fun onCreate(): Boolean {
+        BenchmarkUiSignals.configure(requireNotNull(context).applicationContext)
+        return true
+    }
 
     override fun call(method: String, arg: String?, extras: Bundle?): Bundle = when (method) {
         METHOD_SEED -> seed()
+        METHOD_RESET_UI_SIGNAL -> Bundle().apply {
+            val signal = requireNotNull(arg) { "signal name is required" }
+            putInt(KEY_GENERATION, BenchmarkUiSignals.reset(signal))
+            putString(KEY_SIGNAL_PATH, BenchmarkUiSignals.signalPath(signal))
+            putBoolean(KEY_RESET, true)
+        }
+        METHOD_UI_SIGNAL_STATUS -> Bundle().apply {
+            val signal = requireNotNull(arg) { "signal name is required" }
+            putBoolean(KEY_MARKED, BenchmarkUiSignals.isMarked(signal))
+            putInt(KEY_GENERATION, BenchmarkUiSignals.generation(signal))
+        }
         else -> Bundle().apply { putString(KEY_ERROR, "unsupported method") }
     }
 
@@ -183,9 +197,15 @@ class BenchmarkDataProvider : ContentProvider() {
 
     companion object {
         const val METHOD_SEED = "seed"
+        const val METHOD_RESET_UI_SIGNAL = "reset-ui-signal"
+        const val METHOD_UI_SIGNAL_STATUS = "ui-signal-status"
+        const val KEY_GENERATION = "generation"
+        const val KEY_SIGNAL_PATH = "signalPath"
         const val KEY_COUNT = "count"
         const val KEY_ELAPSED_MS = "elapsed_ms"
         const val KEY_ERROR = "error"
+        const val KEY_RESET = "reset"
+        const val KEY_MARKED = "marked"
         const val TRANSACTION_COUNT = 10_000
         private const val LEDGER_ID = CreateTransactionUseCase.DEFAULT_LEDGER_ID
         private const val CASH_ACCOUNT_ID = "benchmark-cash"

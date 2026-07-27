@@ -1,0 +1,55 @@
+{
+    "reportVersion":  1,
+    "generatedAt":  "2026-07-26T18:10:01.7864846+08:00",
+    "deviceRole":  "target-physical-device",
+    "device":  {
+                   "manufacturer":  "vivo",
+                   "model":  "V2458A",
+                   "androidRelease":  "16",
+                   "sdkInt":  36,
+                   "fingerprint":  "vivo/PD2415M/PD2415:16/BP2A.250605.031.A3_V000L1/compiler260529100608:user/release-keys"
+               },
+    "sampleRequirement":  30,
+    "thresholdsApplied":  true,
+    "overallPassed":  true,
+    "metrics":  [
+                    {
+                        "metric":  "cold-start-ttfd",
+                        "samples":  30,
+                        "p95Ms":  808.399,
+                        "thresholdMs":  2000,
+                        "thresholdApplicable":  true,
+                        "passed":  true
+                    },
+                    {
+                        "metric":  "ledger-first-content-10k",
+                        "samples":  30,
+                        "p95Ms":  227.074,
+                        "thresholdMs":  1000,
+                        "thresholdApplicable":  true,
+                        "passed":  true
+                    },
+                    {
+                        "metric":  "previous-month-switch",
+                        "samples":  30,
+                        "p95Ms":  75.512,
+                        "thresholdMs":  1000,
+                        "thresholdApplicable":  true,
+                        "passed":  true
+                    },
+                    {
+                        "metric":  "save-feedback-10k",
+                        "samples":  30,
+                        "p95Ms":  132.321,
+                        "thresholdMs":  500,
+                        "thresholdApplicable":  true,
+                        "passed":  true
+                    }
+                ],
+    "scrollTrend":  {
+                        "metric":  "ledger-scroll-10k",
+                        "samples":  30,
+                        "p95Ms":  1234.836,
+                        "thresholdApplicable":  false
+                    }
+}

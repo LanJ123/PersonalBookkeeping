@@ -35,6 +35,8 @@ data class RecentTransactionRow(
     @androidx.room.ColumnInfo(name = "account_name") val accountName: String,
     @androidx.room.ColumnInfo(name = "target_account_name") val targetAccountName: String?,
     @androidx.room.ColumnInfo(name = "occurred_at_ms") val occurredAtMs: Long,
+    @androidx.room.ColumnInfo(name = "zone_id") val zoneId: String,
+    @androidx.room.ColumnInfo(name = "local_date_epoch_day") val localDateEpochDay: Long,
 )
 
 data class LedgerTransactionRow(
@@ -107,6 +109,7 @@ data class CategorySpendingRow(
     @ColumnInfo(name = "category_id") val categoryId: String,
     @ColumnInfo(name = "category_name") val categoryName: String,
     @ColumnInfo(name = "amount_minor") val amountMinor: Long,
+    @ColumnInfo(name = "transaction_count") val transactionCount: Int,
 )
 
 data class DailyTrendRow(
@@ -301,7 +304,9 @@ interface TransactionDao {
                c.name AS category_name,
                a.name AS account_name,
                ta.name AS target_account_name,
-               t.occurred_at_ms
+               t.occurred_at_ms,
+               t.zone_id,
+               t.local_date_epoch_day
         FROM transactions AS t
         LEFT JOIN categories AS c ON c.id = t.category_id
         JOIN accounts AS a ON a.id = t.account_id
@@ -418,7 +423,8 @@ interface InsightsDao {
         """
         SELECT t.category_id,
                c.name AS category_name,
-               SUM(t.amount_minor) AS amount_minor
+               SUM(t.amount_minor) AS amount_minor,
+               COUNT(*) AS transaction_count
         FROM transactions t
         JOIN categories c ON c.id = t.category_id
         WHERE t.ledger_id = :ledgerId
@@ -431,6 +437,29 @@ interface InsightsDao {
     )
     fun observeCategorySpending(
         ledgerId: String,
+        startEpochDay: Long,
+        endExclusiveEpochDay: Long,
+    ): Flow<List<CategorySpendingRow>>
+
+    @Query(
+        """
+        SELECT t.category_id,
+               c.name AS category_name,
+               SUM(t.amount_minor) AS amount_minor,
+               COUNT(*) AS transaction_count
+        FROM transactions t
+        JOIN categories c ON c.id = t.category_id
+        WHERE t.ledger_id = :ledgerId
+          AND t.type = :transactionType
+          AND t.local_date_epoch_day >= :startEpochDay
+          AND t.local_date_epoch_day < :endExclusiveEpochDay
+        GROUP BY t.category_id, c.name
+        ORDER BY amount_minor DESC, c.sort_order, c.name
+        """,
+    )
+    fun observeCategoryComposition(
+        ledgerId: String,
+        transactionType: String,
         startEpochDay: Long,
         endExclusiveEpochDay: Long,
     ): Flow<List<CategorySpendingRow>>
@@ -463,7 +492,9 @@ interface InsightsDao {
                c.name AS category_name,
                a.name AS account_name,
                ta.name AS target_account_name,
-               t.occurred_at_ms
+               t.occurred_at_ms,
+               t.zone_id,
+               t.local_date_epoch_day
         FROM transactions t
         LEFT JOIN categories c ON c.id = t.category_id
         JOIN accounts a ON a.id = t.account_id

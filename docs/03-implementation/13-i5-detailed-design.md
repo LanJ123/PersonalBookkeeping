@@ -44,13 +44,17 @@ Benchmark-only Provider 同步创建一个脱敏确定性账本：1 个账本、
 
 Macrobenchmark 使用 AndroidX Benchmark 1.4.1 与 UI Automator 2.4.0：
 
-- 冷启动：10 次 `StartupMode.COLD`，记录 `timeToInitialDisplayMs`；
-- 流水首屏/滚动：预置 10,000 笔，进入流水并执行固定滚动；模拟器采集固定动作端到端墙钟趋势；
-- 月份切换：在首页执行固定上月切换；模拟器采集端到端墙钟趋势；
+- 冷启动：模拟器 10 次、目标真机 30 次 `StartupMode.COLD`，记录 TTID/TTFD 原始样本；
+- 流水首屏：预置 10,000 笔，从点击“流水”到首条基准流水出现；模拟器 5 次、目标真机 30 次；
+- 流水滚动：进入万条流水后执行三次固定滚动，保存 P95 趋势但不绑定当前 NFR 阈值；
+- 月份切换：从点击“上月”到期间内容更新；模拟器 5 次、目标真机 30 次；
+- 保存反馈：从点击“保存”到成功反馈出现；模拟器 5 次、目标真机 30 次；
 - Baseline Profile：覆盖冷启动、首页、流水、统计和设置关键路径，生成后作为源码产物纳入 Release；
 - 保存延迟：设备集成用例在 10,000 笔基础上测量普通新增事务，保留各次耗时。
 
-API 36 模拟器无法稳定提供 FrameTimeline 样本且其 GfxInfo 输出与 AndroidX 采集器不兼容，因此帧级指标不作为本机门禁。模拟器结果报告设备、API、内存和迭代数，只作趋势。最终真机使用 Release-like benchmark APK，关闭省电、保持稳定温度/电量并保存原始 JSON/trace；以 P95 对照冷启动 ≤2s、列表/月切换 ≤1s、保存反馈 ≤500ms。
+API 36 模拟器无法稳定提供 FrameTimeline 样本且其 GfxInfo 输出与 AndroidX 采集器不兼容，因此帧级指标不作为本机门禁。模拟器结果明确标记 `emulator-trend-only`。目标真机结果标记 `target-physical-device`，记录型号、API 和构建指纹，并由主机脚本验证同设备、30 样本和 P95：冷启动 ≤2s、流水首屏/月切换 ≤1s、保存反馈 ≤500ms。低电量错误不在真机上抑制。
+
+厂商真机若对 ProfileInstaller 广播返回异常结果、挂起 UiAutomation，或在目标 App 前台时冻结独立 benchmark 进程，则使用主机侧持久 ADB shell 驱动。benchmark-only Provider 在计时前预置数据并重置信号代次，Compose 目标布局完成后写入包含目标 PID、信号名和代次的小文件，主机以原生文件读取结束计时。该替代路径保持相同的动作边界、样本数、设备元数据和 P95 门槛；Release 不暴露 Provider，也不创建信号文件。
 
 ## 4. 无障碍与自适应
 

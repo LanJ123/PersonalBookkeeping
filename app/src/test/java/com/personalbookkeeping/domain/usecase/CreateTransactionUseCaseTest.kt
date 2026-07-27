@@ -70,6 +70,24 @@ class CreateTransactionUseCaseTest {
         assertEquals("target-account", created.targetAccountId)
     }
 
+    @Test
+    fun `selected occurrence time and zone override clock defaults`() = runBlocking {
+        val selectedTime = Instant.parse("2025-12-31T16:30:00Z")
+        val selectedZone = ZoneId.of("Asia/Shanghai")
+
+        useCase(
+            validCommand().copy(
+                occurredAt = selectedTime,
+                zoneId = selectedZone,
+            ),
+        )
+
+        val created = repository.created.single()
+        assertEquals(selectedTime, created.occurredAt)
+        assertEquals(selectedZone, created.zoneId)
+        assertEquals(LocalDate.of(2026, 1, 1).toEpochDay(), created.localDateEpochDay)
+    }
+
     private fun validCommand() = CreateTransactionCommand(
         amountText = "1.00",
         type = TransactionType.EXPENSE,

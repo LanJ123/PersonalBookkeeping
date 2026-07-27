@@ -1,6 +1,8 @@
 package com.personalbookkeeping.ui.insights
 
+import android.graphics.Paint as AndroidPaint
 import androidx.compose.foundation.Canvas
+import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -8,9 +10,11 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.material3.AlertDialog
@@ -18,6 +22,8 @@ import androidx.compose.material3.Button
 import androidx.compose.material3.Card
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.FilterChip
+import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
@@ -36,84 +42,81 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.layout.onGloballyPositioned
+import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.nativeCanvas
+import androidx.compose.ui.graphics.toArgb
+import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
+import com.personalbookkeeping.benchmark.BenchmarkUiSignals
 import com.personalbookkeeping.common.Money
 import com.personalbookkeeping.domain.model.BudgetProgress
 import com.personalbookkeeping.domain.model.BudgetStatus
-import com.personalbookkeeping.domain.model.DailyTrend
+import com.personalbookkeeping.domain.model.CategorySpending
 import com.personalbookkeeping.domain.model.MonthPeriod
+import com.personalbookkeeping.domain.model.MonthlySummary
+import com.personalbookkeeping.domain.model.PeriodExpenseComparison
 import com.personalbookkeeping.domain.model.RecentTransaction
+import com.personalbookkeeping.domain.model.StatisticsGranularity
+import com.personalbookkeeping.domain.model.StatisticsPeriod
+import com.personalbookkeeping.domain.model.StatisticsTrendPoint
 import com.personalbookkeeping.domain.model.TransactionType
 import com.personalbookkeeping.ui.privacy.displayCny
 import com.personalbookkeeping.ui.privacy.LocalAmountsHidden
 import java.time.LocalDate
-import java.time.ZoneId
 import java.time.format.DateTimeFormatter
+import java.util.Locale
+import kotlin.math.PI
+import kotlin.math.cos
+import kotlin.math.floor
+import kotlin.math.log10
+import kotlin.math.pow
+import kotlin.math.roundToInt
+import kotlin.math.sin
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun HomeScreen(
-    state: InsightsUiState,
-    snackbarHostState: SnackbarHostState,
-    onPreviousMonth: () -> Unit,
-    onNextMonth: () -> Unit,
-    onViewAll: (MonthPeriod) -> Unit,
-    onTransactionClick: (String) -> Unit,
-    onBudgets: () -> Unit,
-    onMessageConsumed: () -> Unit,
+    state: HomeUiState,
+    onTransactionClick: (String) -> Unit = {},
 ) {
-    MessageEffect(state, snackbarHostState, onMessageConsumed)
     Scaffold(
         topBar = { TopAppBar(title = { Text("个人记账") }) },
-        snackbarHost = { SnackbarHost(snackbarHostState) },
     ) { padding ->
         if (state.isLoading) CenterLoading(padding) else LazyColumn(
-            modifier = Modifier.fillMaxSize().padding(padding),
+            modifier = Modifier
+                .fillMaxSize()
+                .padding(padding)
+                .testTag("home-list")
+                .onGloballyPositioned {
+                    BenchmarkUiSignals.mark(BenchmarkUiSignals.HOME_READY)
+                },
             contentPadding = PaddingValues(16.dp),
             verticalArrangement = Arrangement.spacedBy(12.dp),
         ) {
-            item { MonthSwitcher(state.period, onPreviousMonth, onNextMonth) }
-            item { SummaryCard(state) }
+            item { HomeOverviewCard(state) }
+            state.message?.let { message -> item { EmptyCard(message) } }
             item {
-                val budget = state.insights.totalBudget
-                if (budget == null) {
-                    Card(Modifier.fillMaxWidth().clickable(onClick = onBudgets)) {
-                        Row(
-                            Modifier.fillMaxWidth().padding(16.dp),
-                            horizontalArrangement = Arrangement.SpaceBetween,
-                            verticalAlignment = Alignment.CenterVertically,
-                        ) {
-                            Column { Text("本月预算", fontWeight = FontWeight.SemiBold); Text("尚未设置", color = MaterialTheme.colorScheme.onSurfaceVariant) }
-                            Text("去设置")
-                        }
-                    }
-                } else BudgetCard("本月预算", budget, onBudgets)
+                Text(
+                    "本月流水（${state.transactions.size}笔）",
+                    style = MaterialTheme.typography.titleMedium,
+                    fontWeight = FontWeight.SemiBold,
+                )
             }
-            item {
-                Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
-                    Text("最近流水", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.SemiBold)
-                    TextButton(onClick = { onViewAll(state.period) }) { Text("查看全部") }
-                }
-            }
-            if (state.insights.recentTransactions.isEmpty()) {
-                item {
-                    Column(
-                        Modifier.fillMaxWidth().padding(vertical = 36.dp),
-                        horizontalAlignment = Alignment.CenterHorizontally,
-                        verticalArrangement = Arrangement.spacedBy(6.dp),
-                    ) {
-                        Text("这个月还没有流水")
-                        Text("点击右下角，记下第一笔", color = MaterialTheme.colorScheme.onSurfaceVariant)
-                    }
-                }
+            if (state.transactions.isEmpty()) {
+                item { EmptyCard("本月还没有流水，点击“记一笔”开始") }
             } else {
-                items(state.insights.recentTransactions, key = { it.id }) { transaction ->
-                    RecentTransactionCard(transaction, onTransactionClick)
+                val dailyGroups = state.transactions.toHomeDailyGroups()
+                items(dailyGroups, key = { it.epochDay }) { group ->
+                    HomeDailyGroupCard(group, onTransactionClick)
                 }
             }
         }
@@ -123,47 +126,731 @@ fun HomeScreen(
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun StatisticsScreen(
-    state: InsightsUiState,
-    onPreviousMonth: () -> Unit,
-    onNextMonth: () -> Unit,
-    onCategoryClick: (MonthPeriod, String) -> Unit,
+    state: StatisticsUiState,
+    onGranularitySelected: (StatisticsGranularity) -> Unit,
+    onTypeSelected: (TransactionType) -> Unit,
+    onPreviousPeriod: () -> Unit,
+    onNextPeriod: () -> Unit,
+    onCategoryClick: (StatisticsPeriod, TransactionType, String) -> Unit,
 ) {
     Scaffold(topBar = { TopAppBar(title = { Text("统计") }) }) { padding ->
         if (state.isLoading) CenterLoading(padding) else LazyColumn(
-            modifier = Modifier.fillMaxSize().padding(padding),
+            modifier = Modifier
+                .fillMaxSize()
+                .padding(padding)
+                .testTag("statistics-list"),
             contentPadding = PaddingValues(16.dp),
             verticalArrangement = Arrangement.spacedBy(12.dp),
         ) {
-            item { MonthSwitcher(state.period, onPreviousMonth, onNextMonth) }
-            item { SummaryCard(state) }
-            item { Text("支出分类排行", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.SemiBold) }
-            if (state.insights.categories.isEmpty()) {
-                item { EmptyCard("本月暂无支出，分类排行将在记账后显示") }
-            } else {
-                items(state.insights.categories, key = { it.categoryId }) { category ->
-                    val total = state.insights.summary.expense.minorUnits
-                    val share = if (total == 0L) 0f else category.amount.minorUnits.toFloat() / total.toFloat()
-                    Card(Modifier.fillMaxWidth().clickable { onCategoryClick(state.period, category.categoryId) }) {
-                        Column(Modifier.padding(14.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                            Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
-                                Text(category.categoryName, fontWeight = FontWeight.SemiBold)
-                                Text(category.amount.displayCny())
-                            }
-                            Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(10.dp), verticalAlignment = Alignment.CenterVertically) {
-                                LinearProgressIndicator(progress = { share.coerceIn(0f, 1f) }, modifier = Modifier.weight(1f))
-                                Text("${(share * 100).toInt()}%", style = MaterialTheme.typography.labelMedium)
-                            }
-                            Text("查看对应流水", style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
-                        }
-                    }
-                }
+            item {
+                StatisticsGranularitySelector(
+                    selected = state.period.granularity,
+                    onSelected = onGranularitySelected,
+                )
             }
-            item { Text("每日收支趋势", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.SemiBold) }
-            if (state.insights.dailyTrend.isEmpty()) item { EmptyCard("本月暂无收支趋势") }
-            else item { DailyTrendChart(state.insights.dailyTrend) }
+            item {
+                StatisticsPeriodSwitcher(
+                    period = state.period,
+                    onPrevious = onPreviousPeriod,
+                    onNext = onNextPeriod,
+                )
+            }
+            item {
+                StatisticsTypeSelector(
+                    selected = state.type,
+                    onSelected = onTypeSelected,
+                )
+            }
+            state.message?.let { message -> item { EmptyCard(message) } }
+            item { StatisticsSummaryCard(state) }
+            item {
+                Text(
+                    "${state.period.granularity.periodLabel()}${state.type.compositionLabel()}趋势",
+                    style = MaterialTheme.typography.titleMedium,
+                    fontWeight = FontWeight.SemiBold,
+                )
+            }
+            item { StatisticsTrendChart(state.insights.trend, state.type) }
+            item {
+                CategoryCompositionCard(
+                    type = state.type,
+                    categories = if (state.type == TransactionType.EXPENSE) {
+                        state.insights.categories
+                    } else {
+                        state.insights.incomeCategories
+                    },
+                    total = if (state.type == TransactionType.EXPENSE) {
+                        state.insights.summary.expense
+                    } else {
+                        state.insights.summary.income
+                    },
+                    onCategoryClick = { categoryId ->
+                        onCategoryClick(state.period, state.type, categoryId)
+                    },
+                )
+            }
+            item {
+                Text(
+                    "${state.period.granularity.comparisonLabel()}${state.type.compositionLabel()}对比",
+                    style = MaterialTheme.typography.titleMedium,
+                    fontWeight = FontWeight.SemiBold,
+                )
+            }
+            item { PeriodComparisonChart(state) }
         }
     }
 }
+
+@Composable
+private fun HomeOverviewCard(state: HomeUiState) {
+    Card(Modifier.fillMaxWidth()) {
+        Column(Modifier.padding(20.dp), verticalArrangement = Arrangement.spacedBy(18.dp)) {
+            Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
+                Text("今日支出", color = MaterialTheme.colorScheme.onSurfaceVariant)
+                Text(
+                    state.todayExpense.displayCny(),
+                    style = MaterialTheme.typography.displaySmall,
+                    fontWeight = FontWeight.Bold,
+                )
+            }
+            Row(
+                Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.spacedBy(28.dp),
+            ) {
+                SummaryValue("本月支出", state.summary.expense, modifier = Modifier.weight(1f))
+                SummaryValue("本月收入", state.summary.income, modifier = Modifier.weight(1f))
+            }
+        }
+    }
+}
+
+private data class HomeDailyGroup(
+    val epochDay: Long,
+    val transactions: List<RecentTransaction>,
+    val expense: Money,
+    val income: Money,
+)
+
+private fun List<RecentTransaction>.toHomeDailyGroups(): List<HomeDailyGroup> =
+    groupBy { it.localDateEpochDay }
+        .toSortedMap(compareByDescending { it })
+        .map { (epochDay, transactions) ->
+            HomeDailyGroup(
+                epochDay = epochDay,
+                transactions = transactions,
+                expense = Money.fromMinor(
+                    transactions.filter { it.type == TransactionType.EXPENSE }
+                        .sumOf { it.amount.minorUnits },
+                ),
+                income = Money.fromMinor(
+                    transactions.filter { it.type == TransactionType.INCOME }
+                        .sumOf { it.amount.minorUnits },
+                ),
+            )
+        }
+
+@Composable
+private fun HomeDailyGroupCard(
+    group: HomeDailyGroup,
+    onTransactionClick: (String) -> Unit,
+) {
+    val date = LocalDate.ofEpochDay(group.epochDay)
+    Card(Modifier.fillMaxWidth().testTag("home-day-${group.epochDay}")) {
+        Column {
+            Row(
+                Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 14.dp),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
+                Text(
+                    date.format(HOME_DAY_FORMAT),
+                    fontWeight = FontWeight.SemiBold,
+                )
+                Text(
+                    "支 ${group.expense.displayCny()}  收 ${group.income.displayCny()}",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+            }
+            HorizontalDivider()
+            group.transactions.forEachIndexed { index, transaction ->
+                HomeTransactionRow(transaction, onTransactionClick)
+                if (index < group.transactions.lastIndex) {
+                    HorizontalDivider(Modifier.padding(start = 16.dp))
+                }
+            }
+        }
+    }
+}
+
+@Composable
+private fun HomeTransactionRow(
+    transaction: RecentTransaction,
+    onClick: (String) -> Unit,
+) {
+    val localDateTime = transaction.occurredAt.atZone(transaction.zoneId)
+    val flow = when (transaction.type) {
+        TransactionType.TRANSFER ->
+            "${transaction.accountName} → ${transaction.targetAccountName.orEmpty()}"
+        else -> transaction.accountName
+    }
+    val amount = when (transaction.type) {
+        TransactionType.EXPENSE -> "-${transaction.amount.displayCny()}"
+        TransactionType.INCOME -> transaction.amount.displayCny(showPositiveSign = true)
+        TransactionType.TRANSFER -> transaction.amount.displayCny()
+    }
+    Row(
+        Modifier
+            .fillMaxWidth()
+            .clickable { onClick(transaction.id) }
+            .padding(horizontal = 16.dp, vertical = 14.dp),
+        horizontalArrangement = Arrangement.spacedBy(12.dp),
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(3.dp)) {
+            Text(
+                transaction.categoryName ?: transaction.type.compositionLabel(),
+                fontWeight = FontWeight.SemiBold,
+            )
+            Text(
+                "${localDateTime.format(HOME_TRANSACTION_TIME_FORMAT)} · $flow",
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+            )
+        }
+        Text(amount, fontWeight = FontWeight.SemiBold)
+    }
+}
+
+@Composable
+private fun CategoryCompositionCard(
+    type: TransactionType,
+    categories: List<CategorySpending>,
+    total: Money,
+    onCategoryClick: (String) -> Unit,
+) {
+    val palette = CATEGORY_CHART_COLORS
+    val amountsHidden = LocalAmountsHidden.current
+    val description = categories.joinToString("；") { category ->
+        val share = category.shareOf(total)
+        if (amountsHidden) {
+            "${category.categoryName}${category.transactionCount}笔，占比${share.percentLabel()}"
+        } else {
+            "${category.categoryName}${category.transactionCount}笔，${category.amount.formatCny()}，占比${share.percentLabel()}"
+        }
+    }
+    Card(Modifier.fillMaxWidth().testTag("category-composition-card")) {
+        Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
+            Row(
+                Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.Start,
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
+                Text(
+                    "${type.compositionLabel()}分类构成",
+                    style = MaterialTheme.typography.titleMedium,
+                    fontWeight = FontWeight.SemiBold,
+                )
+            }
+            if (categories.isEmpty() || total.minorUnits <= 0L) {
+                Text(
+                    "当前周期暂无${type.compositionLabel()}，分类构成将在记账后显示",
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+            } else {
+                val labelColor = MaterialTheme.colorScheme.onSurfaceVariant
+                Box(
+                    Modifier
+                        .fillMaxWidth()
+                        .height(260.dp)
+                        .semantics { contentDescription = description },
+                    contentAlignment = Alignment.Center,
+                ) {
+                    Canvas(Modifier.fillMaxSize()) {
+                        val strokeWidth = 34.dp.toPx()
+                        val radius = minOf(size.width, size.height) * 0.23f
+                        val diameter = radius * 2f
+                        val arcTopLeft = Offset(
+                            (size.width - diameter) / 2f,
+                            (size.height - diameter) / 2f,
+                        )
+                        val center = Offset(size.width / 2f, size.height / 2f)
+                        val labels = mutableListOf<PieChartLabel>()
+                        var startAngle = -90f
+                        categories.forEachIndexed { index, category ->
+                            val sweep = category.shareOf(total) * 360f
+                            drawArc(
+                                color = palette[index % palette.size],
+                                startAngle = startAngle,
+                                sweepAngle = sweep,
+                                useCenter = false,
+                                topLeft = arcTopLeft,
+                                size = Size(diameter, diameter),
+                                style = Stroke(width = strokeWidth),
+                            )
+                            val middleRadians = (startAngle + sweep / 2f) * PI.toFloat() / 180f
+                            val directionX = cos(middleRadians)
+                            val directionY = sin(middleRadians)
+                            labels += PieChartLabel(
+                                text = "${category.categoryName} ${category.shareOf(total).percentLabel()}",
+                                color = palette[index % palette.size],
+                                start = Offset(
+                                    center.x + directionX * (radius + strokeWidth / 2f),
+                                    center.y + directionY * (radius + strokeWidth / 2f),
+                                ),
+                                elbow = Offset(
+                                    center.x + directionX * (radius + strokeWidth / 2f + 16.dp.toPx()),
+                                    center.y + directionY * (radius + strokeWidth / 2f + 16.dp.toPx()),
+                                ),
+                                rightSide = directionX >= 0f,
+                            )
+                            startAngle += sweep
+                        }
+                        val textPaint = AndroidPaint(AndroidPaint.ANTI_ALIAS_FLAG).apply {
+                            color = labelColor.toArgb()
+                            textSize = 11.sp.toPx()
+                        }
+                        labels.groupBy { it.rightSide }.forEach { (rightSide, sideLabels) ->
+                            var previousY = 8.dp.toPx()
+                            sideLabels.sortedBy { it.elbow.y }.forEach { label ->
+                                val y = label.elbow.y
+                                    .coerceAtLeast(previousY + 16.dp.toPx())
+                                    .coerceAtMost(size.height - 8.dp.toPx())
+                                previousY = y
+                                val lineEndX = if (rightSide) size.width - 8.dp.toPx() else 8.dp.toPx()
+                                drawLine(label.color, label.start, label.elbow, strokeWidth = 2.dp.toPx())
+                                drawLine(
+                                    label.color,
+                                    label.elbow,
+                                    Offset(lineEndX, y),
+                                    strokeWidth = 2.dp.toPx(),
+                                )
+                                textPaint.textAlign = if (rightSide) {
+                                    AndroidPaint.Align.RIGHT
+                                } else {
+                                    AndroidPaint.Align.LEFT
+                                }
+                                drawContext.canvas.nativeCanvas.drawText(
+                                    label.text,
+                                    lineEndX,
+                                    y - 3.dp.toPx(),
+                                    textPaint,
+                                )
+                            }
+                        }
+                    }
+                    Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                        Text(total.displayCny(), fontWeight = FontWeight.Bold)
+                        Text(
+                            "共${type.compositionLabel()}（元）",
+                            style = MaterialTheme.typography.labelSmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        )
+                    }
+                }
+                categories.forEachIndexed { index, category ->
+                    val share = category.shareOf(total)
+                    Row(
+                        Modifier
+                            .fillMaxWidth()
+                            .clickable { onCategoryClick(category.categoryId) }
+                            .padding(vertical = 8.dp),
+                        horizontalArrangement = Arrangement.spacedBy(8.dp),
+                        verticalAlignment = Alignment.CenterVertically,
+                    ) {
+                        Text("${index + 1}", color = MaterialTheme.colorScheme.onSurfaceVariant)
+                        Text("●", color = palette[index % palette.size])
+                        Text(category.categoryName, fontWeight = FontWeight.SemiBold)
+                        Text(
+                            "${category.transactionCount}笔",
+                            style = MaterialTheme.typography.labelMedium,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        )
+                        Text(
+                            share.percentLabel(),
+                            style = MaterialTheme.typography.labelMedium,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        )
+                        Text(
+                            category.amount.displayCny(),
+                            modifier = Modifier.weight(1f),
+                            fontWeight = FontWeight.SemiBold,
+                            textAlign = TextAlign.End,
+                        )
+                        Text("›", color = MaterialTheme.colorScheme.onSurfaceVariant)
+                    }
+                }
+            }
+        }
+    }
+}
+
+@Composable
+private fun StatisticsGranularitySelector(
+    selected: StatisticsGranularity,
+    onSelected: (StatisticsGranularity) -> Unit,
+) {
+    Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+        StatisticsGranularity.entries.forEach { granularity ->
+            FilterChip(
+                selected = granularity == selected,
+                onClick = { onSelected(granularity) },
+                label = { Text(granularity.tabLabel()) },
+                modifier = Modifier.weight(1f),
+            )
+        }
+    }
+}
+
+@Composable
+private fun StatisticsTypeSelector(
+    selected: TransactionType,
+    onSelected: (TransactionType) -> Unit,
+) {
+    Row(
+        Modifier.fillMaxWidth(),
+        horizontalArrangement = Arrangement.spacedBy(8.dp),
+    ) {
+        listOf(TransactionType.EXPENSE, TransactionType.INCOME).forEach { type ->
+            FilterChip(
+                selected = type == selected,
+                onClick = { onSelected(type) },
+                label = { Text(type.compositionLabel()) },
+                modifier = Modifier
+                    .weight(1f)
+                    .testTag("statistics-type-${type.name.lowercase()}"),
+            )
+        }
+    }
+}
+
+@Composable
+private fun StatisticsPeriodSwitcher(
+    period: StatisticsPeriod,
+    onPrevious: () -> Unit,
+    onNext: () -> Unit,
+) {
+    Row(
+        Modifier.fillMaxWidth(),
+        horizontalArrangement = Arrangement.SpaceBetween,
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        OutlinedButton(
+            onClick = onPrevious,
+            modifier = Modifier.testTag("statistics-previous-period"),
+        ) { Text("上一${period.granularity.unitLabel()}") }
+        Text(
+            period.label,
+            modifier = Modifier
+                .testTag("statistics-period")
+                .onGloballyPositioned {
+                    BenchmarkUiSignals.mark(BenchmarkUiSignals.MONTH_READY)
+                },
+            style = MaterialTheme.typography.titleMedium,
+            fontWeight = FontWeight.SemiBold,
+        )
+        OutlinedButton(
+            onClick = onNext,
+            modifier = Modifier.testTag("statistics-next-period"),
+        ) { Text("下一${period.granularity.unitLabel()}") }
+    }
+}
+
+@Composable
+private fun StatisticsSummaryCard(state: StatisticsUiState) {
+    val summary = state.insights.summary
+    val selectedTotal = summary.amountFor(state.type)
+    val average = if (state.type == TransactionType.EXPENSE) {
+        state.insights.averageDailyExpense
+    } else {
+        state.insights.averageDailyIncome
+    }
+    val previousTotal = state.insights.comparisons
+        .dropLast(1)
+        .lastOrNull()
+        ?.amountFor(state.type)
+        ?: Money.fromMinor(0)
+    val previousDifference = Money.fromMinor(selectedTotal.minorUnits - previousTotal.minorUnits)
+    val typeLabel = state.type.compositionLabel()
+    Card(Modifier.fillMaxWidth()) {
+        Column(Modifier.padding(18.dp), verticalArrangement = Arrangement.spacedBy(18.dp)) {
+            Row(
+                Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.spacedBy(18.dp),
+            ) {
+                SummaryValue(
+                    "${state.period.granularity.periodLabel()}$typeLabel",
+                    selectedTotal,
+                    modifier = Modifier.weight(1f),
+                )
+                SummaryValue(
+                    "日均$typeLabel",
+                    average,
+                    modifier = Modifier.weight(1f),
+                )
+            }
+            Row(
+                Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.spacedBy(18.dp),
+            ) {
+                SummaryValue(
+                    "比上${state.period.granularity.periodLabel()}$typeLabel",
+                    previousDifference,
+                    modifier = Modifier.weight(1f),
+                )
+                SummaryValue(
+                    "收支结余",
+                    summary.balance,
+                    modifier = Modifier.weight(1f),
+                )
+            }
+        }
+    }
+}
+
+@Composable
+private fun StatisticsTrendChart(
+    trend: List<StatisticsTrendPoint>,
+    type: TransactionType,
+) {
+    if (trend.isEmpty()) {
+        EmptyCard("当前周期暂无${type.compositionLabel()}趋势")
+        return
+    }
+    val lineColor = if (type == TransactionType.EXPENSE) {
+        MaterialTheme.colorScheme.primary
+    } else {
+        MaterialTheme.colorScheme.tertiary
+    }
+    val values = trend.map { it.amountFor(type).minorUnits.coerceAtLeast(0L) }
+    val axisMax = niceAxisMax(values.maxOrNull() ?: 0L)
+    val gridColor = MaterialTheme.colorScheme.outlineVariant
+    val amountsHidden = LocalAmountsHidden.current
+    val description = trend.joinToString("；") {
+        if (amountsHidden) "${it.label}金额已隐藏" else
+            "${it.label}${type.compositionLabel()}${it.amountFor(type).formatCny()}"
+    }
+    val axisLabels = if (trend.size <= 12) trend else listOf(trend.first(), trend[trend.size / 2], trend.last())
+    Card(Modifier.fillMaxWidth()) {
+        Column(Modifier.padding(14.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
+            Row(
+                Modifier
+                    .fillMaxWidth()
+                    .semantics { contentDescription = description },
+            ) {
+                Column(
+                    Modifier.width(58.dp).height(180.dp),
+                    verticalArrangement = Arrangement.SpaceBetween,
+                    horizontalAlignment = Alignment.End,
+                ) {
+                    (4 downTo 0).forEach { tick ->
+                        Text(
+                            if (amountsHidden) "•••" else formatChartAmount(axisMax * tick / 4),
+                            style = MaterialTheme.typography.labelSmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        )
+                    }
+                }
+                Canvas(Modifier.weight(1f).height(180.dp).padding(start = 8.dp)) {
+                    val step = if (trend.size <= 1) size.width else size.width / (trend.size - 1)
+                    fun y(value: Long) = size.height - size.height * value / axisMax.toFloat()
+                    repeat(5) { index ->
+                        val y = size.height * index / 4f
+                        drawLine(
+                            gridColor,
+                            Offset(0f, y),
+                            Offset(size.width, y),
+                            strokeWidth = 1.dp.toPx(),
+                        )
+                    }
+                    values.zipWithNext().forEachIndexed { index, (first, second) ->
+                        drawLine(
+                            lineColor,
+                            Offset(step * index, y(first)),
+                            Offset(step * (index + 1), y(second)),
+                            strokeWidth = 3.dp.toPx(),
+                        )
+                    }
+                    values.forEachIndexed { index, value ->
+                        val x = if (values.size <= 1) size.width / 2 else step * index
+                        drawCircle(lineColor, 4.dp.toPx(), Offset(x, y(value)))
+                    }
+                }
+            }
+            Row(
+                Modifier.fillMaxWidth().padding(start = 66.dp),
+                horizontalArrangement = Arrangement.SpaceBetween,
+            ) {
+                axisLabels.forEach { Text(it.label, style = MaterialTheme.typography.labelSmall) }
+            }
+        }
+    }
+}
+
+@Composable
+private fun PeriodComparisonChart(state: StatisticsUiState) {
+    val comparisons = state.insights.comparisons
+    if (comparisons.isEmpty()) {
+        EmptyCard("暂无可对比周期")
+        return
+    }
+    val color = if (state.type == TransactionType.EXPENSE) {
+        MaterialTheme.colorScheme.primary
+    } else {
+        MaterialTheme.colorScheme.tertiary
+    }
+    val max = comparisons.maxOf { it.amountFor(state.type).minorUnits }.coerceAtLeast(1L)
+    val amountsHidden = LocalAmountsHidden.current
+    val description = comparisons.joinToString("；") {
+        if (amountsHidden) "${it.label}${state.type.compositionLabel()}金额已隐藏" else
+            "${it.label}${state.type.compositionLabel()}${it.amountFor(state.type).formatCny()}"
+    }
+    Card(Modifier.fillMaxWidth()) {
+        Column(Modifier.padding(14.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
+            Row(
+                Modifier
+                    .fillMaxWidth()
+                    .height(190.dp)
+                    .semantics { contentDescription = description },
+                horizontalArrangement = Arrangement.spacedBy(4.dp),
+                verticalAlignment = Alignment.Bottom,
+            ) {
+                comparisons.forEach { comparison ->
+                    val value = comparison.amountFor(state.type).minorUnits.coerceAtLeast(0L)
+                    Column(
+                        Modifier.weight(1f).fillMaxHeight(),
+                        horizontalAlignment = Alignment.CenterHorizontally,
+                        verticalArrangement = Arrangement.Bottom,
+                    ) {
+                        Text(
+                            if (amountsHidden) "•••" else formatChartAmount(value),
+                            style = MaterialTheme.typography.labelSmall,
+                            color = color,
+                            maxLines = 1,
+                        )
+                        Box(
+                            Modifier
+                                .height(138.dp)
+                                .fillMaxWidth(),
+                            contentAlignment = Alignment.BottomCenter,
+                        ) {
+                            Box(
+                                Modifier
+                                    .width(28.dp)
+                                    .fillMaxHeight(
+                                        if (value == 0L) 0.01f else
+                                            (value.toFloat() / max.toFloat()).coerceIn(0.03f, 1f),
+                                    )
+                                    .background(color),
+                            )
+                        }
+                        Text(
+                            comparison.label,
+                            style = MaterialTheme.typography.labelSmall,
+                            maxLines = 1,
+                        )
+                    }
+                }
+            }
+            Text(
+                "最近 ${comparisons.size} 个周期",
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+            )
+        }
+    }
+}
+
+private fun StatisticsGranularity.tabLabel(): String = when (this) {
+    StatisticsGranularity.WEEK -> "周"
+    StatisticsGranularity.MONTH -> "月"
+    StatisticsGranularity.YEAR -> "年"
+}
+
+private fun StatisticsGranularity.unitLabel(): String = tabLabel()
+
+private fun StatisticsGranularity.periodLabel(): String = tabLabel()
+
+private fun StatisticsGranularity.comparisonLabel(): String = when (this) {
+    StatisticsGranularity.WEEK -> "周"
+    StatisticsGranularity.MONTH -> "月"
+    StatisticsGranularity.YEAR -> "年"
+}
+
+private fun TransactionType.compositionLabel(): String = when (this) {
+    TransactionType.EXPENSE -> "支出"
+    TransactionType.INCOME -> "收入"
+    TransactionType.TRANSFER -> "转账"
+}
+
+private fun MonthlySummary.amountFor(type: TransactionType): Money = when (type) {
+    TransactionType.EXPENSE -> expense
+    TransactionType.INCOME -> income
+    TransactionType.TRANSFER -> Money.fromMinor(0)
+}
+
+private fun StatisticsTrendPoint.amountFor(type: TransactionType): Money = when (type) {
+    TransactionType.EXPENSE -> expense
+    TransactionType.INCOME -> income
+    TransactionType.TRANSFER -> Money.fromMinor(0)
+}
+
+private fun PeriodExpenseComparison.amountFor(type: TransactionType): Money = when (type) {
+    TransactionType.EXPENSE -> expense
+    TransactionType.INCOME -> income
+    TransactionType.TRANSFER -> Money.fromMinor(0)
+}
+
+private fun niceAxisMax(value: Long): Long {
+    if (value <= 0L) return 10_000L
+    val magnitude = 10.0.pow(floor(log10(value.toDouble())))
+    val normalized = value / magnitude
+    val nice = when {
+        normalized <= 1.0 -> 1.0
+        normalized <= 2.0 -> 2.0
+        normalized <= 5.0 -> 5.0
+        else -> 10.0
+    }
+    return (nice * magnitude).toLong().coerceAtLeast(1L)
+}
+
+private fun formatChartAmount(minorUnits: Long): String =
+    if (minorUnits >= 1_000_000L) {
+        String.format(Locale.ROOT, "¥%.2f万", minorUnits / 1_000_000.0)
+    } else {
+        Money.fromMinor(minorUnits).formatCny()
+    }
+
+private fun CategorySpending.shareOf(total: Money): Float =
+    if (total.minorUnits <= 0L) 0f else
+        (amount.minorUnits.toFloat() / total.minorUnits.toFloat()).coerceIn(0f, 1f)
+
+private fun Float.percentLabel(): String = "${(this * 100).roundToInt()}%"
+
+private val HOME_TRANSACTION_TIME_FORMAT =
+    DateTimeFormatter.ofPattern("HH:mm", Locale.SIMPLIFIED_CHINESE)
+
+private val HOME_DAY_FORMAT =
+    DateTimeFormatter.ofPattern("M月d日 EEEE", Locale.SIMPLIFIED_CHINESE)
+
+private data class PieChartLabel(
+    val text: String,
+    val color: Color,
+    val start: Offset,
+    val elbow: Offset,
+    val rightSide: Boolean,
+)
+
+private val CATEGORY_CHART_COLORS = listOf(
+    Color(0xFF4F7DF3),
+    Color(0xFF59A9F8),
+    Color(0xFF12BDE2),
+    Color(0xFF12C9BC),
+    Color(0xFFFFC928),
+    Color(0xFFFF8A3D),
+    Color(0xFF8D79F6),
+    Color(0xFF7A90A8),
+)
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -212,86 +899,41 @@ fun BudgetsScreen(
 @Composable
 private fun MonthSwitcher(period: MonthPeriod, onPrevious: () -> Unit, onNext: () -> Unit) {
     Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
-        OutlinedButton(onClick = onPrevious) { Text("上月") }
-        Text(period.label, style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.SemiBold)
-        OutlinedButton(onClick = onNext) { Text("下月") }
+        OutlinedButton(
+            onClick = onPrevious,
+            modifier = Modifier.testTag("home-previous-month"),
+        ) { Text("上月") }
+        Text(
+            period.label,
+            modifier = Modifier
+                .testTag("home-period")
+                .onGloballyPositioned {
+                    BenchmarkUiSignals.mark(BenchmarkUiSignals.MONTH_READY)
+                },
+            style = MaterialTheme.typography.titleMedium,
+            fontWeight = FontWeight.SemiBold,
+        )
+        OutlinedButton(
+            onClick = onNext,
+            modifier = Modifier.testTag("home-next-month"),
+        ) { Text("下月") }
     }
 }
 
 @Composable
-private fun SummaryCard(state: InsightsUiState) {
-    val summary = state.insights.summary
-    Card(Modifier.fillMaxWidth()) {
-        Column(Modifier.padding(18.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
-            Text("本月支出", color = MaterialTheme.colorScheme.onSurfaceVariant)
-            Text(summary.expense.displayCny(), style = MaterialTheme.typography.headlineMedium, fontWeight = FontWeight.Bold)
-            Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
-                SummaryValue("收入", summary.income)
-                SummaryValue("结余", summary.balance)
-                SummaryValue("流水", null, "${summary.transactionCount} 笔")
-            }
-        }
-    }
-}
-
-@Composable
-private fun SummaryValue(label: String, money: Money?, text: String? = null) {
-    Column { Text(label, style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.onSurfaceVariant); Text(text ?: money!!.displayCny(), fontWeight = FontWeight.SemiBold) }
-}
-
-@Composable
-private fun BudgetCard(title: String, budget: BudgetProgress, onClick: () -> Unit) {
-    Card(Modifier.fillMaxWidth().clickable(onClick = onClick)) {
-        Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
-            Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) { Text(title, fontWeight = FontWeight.SemiBold); Text(budget.status.label(), color = budget.status.color()) }
-            Text("已用 ${budget.used.displayCny()} / ${budget.limit.displayCny()}")
-            LinearProgressIndicator(progress = { budget.progressFraction }, modifier = Modifier.fillMaxWidth())
-            Text("剩余 ${budget.remaining.displayCny()}", style = MaterialTheme.typography.bodySmall)
-        }
-    }
-}
-
-@Composable
-private fun RecentTransactionCard(transaction: RecentTransaction, onClick: (String) -> Unit) {
-    Card(Modifier.fillMaxWidth().clickable { onClick(transaction.id) }) {
-        Row(Modifier.fillMaxWidth().padding(14.dp), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
-            Column(Modifier.weight(1f)) {
-                Text(transaction.categoryName ?: transaction.type.label(), fontWeight = FontWeight.SemiBold)
-                val date = transaction.occurredAt.atZone(ZoneId.systemDefault()).toLocalDate().format(DateTimeFormatter.ofPattern("M月d日"))
-                Text("$date · ${transaction.accountName}", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
-            }
-            Text(transaction.signedAmount(), fontWeight = FontWeight.SemiBold)
-        }
-    }
-}
-
-@Composable
-private fun DailyTrendChart(trend: List<DailyTrend>) {
-    val expenseColor = MaterialTheme.colorScheme.error
-    val incomeColor = MaterialTheme.colorScheme.primary
-    val max = trend.maxOf { maxOf(it.expense.minorUnits, it.income.minorUnits) }.coerceAtLeast(1L)
-    val amountsHidden = LocalAmountsHidden.current
-    val description = trend.joinToString("；") {
-        val day = LocalDate.ofEpochDay(it.epochDay).dayOfMonth
-        if (amountsHidden) "${day}日金额已隐藏" else
-            "${day}日收入${it.income.formatCny()}，支出${it.expense.formatCny()}"
-    }
-    Card(Modifier.fillMaxWidth()) {
-        Column(Modifier.padding(14.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
-            Row(horizontalArrangement = Arrangement.spacedBy(18.dp)) { Text("收入", color = incomeColor); Text("支出", color = expenseColor) }
-            Canvas(Modifier.fillMaxWidth().height(160.dp).semantics { contentDescription = description }) {
-                val step = size.width / trend.size.coerceAtLeast(1)
-                val barWidth = (step * 0.28f).coerceAtLeast(2f)
-                trend.forEachIndexed { index, point ->
-                    val center = step * (index + 0.5f)
-                    val incomeHeight = size.height * point.income.minorUnits / max.toFloat()
-                    val expenseHeight = size.height * point.expense.minorUnits / max.toFloat()
-                    drawLine(incomeColor, Offset(center - barWidth, size.height), Offset(center - barWidth, size.height - incomeHeight), strokeWidth = barWidth)
-                    drawLine(expenseColor, Offset(center + barWidth, size.height), Offset(center + barWidth, size.height - expenseHeight), strokeWidth = barWidth)
-                }
-            }
-            Text("共 ${trend.size} 个有收支记录的日期；图形仅作趋势辅助，准确金额以汇总和流水为准。", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
-        }
+private fun SummaryValue(
+    label: String,
+    money: Money?,
+    modifier: Modifier = Modifier,
+    text: String? = null,
+) {
+    Column(modifier) {
+        Text(
+            label,
+            style = MaterialTheme.typography.labelMedium,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+        )
+        Text(text ?: money!!.displayCny(), fontWeight = FontWeight.SemiBold)
     }
 }
 
@@ -357,17 +999,4 @@ private fun BudgetStatus.color(): Color = when (this) {
     BudgetStatus.NORMAL -> MaterialTheme.colorScheme.primary
     BudgetStatus.NEAR_LIMIT -> MaterialTheme.colorScheme.tertiary
     BudgetStatus.EXCEEDED -> MaterialTheme.colorScheme.error
-}
-
-private fun TransactionType.label() = when (this) {
-    TransactionType.EXPENSE -> "支出"
-    TransactionType.INCOME -> "收入"
-    TransactionType.TRANSFER -> "转账"
-}
-
-@Composable
-private fun RecentTransaction.signedAmount() = when (type) {
-    TransactionType.EXPENSE -> "-${amount.displayCny()}"
-    TransactionType.INCOME -> amount.displayCny(showPositiveSign = true)
-    TransactionType.TRANSFER -> amount.displayCny()
 }

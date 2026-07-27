@@ -31,6 +31,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.unit.dp
 import java.time.LocalDate
 import java.time.format.DateTimeFormatter
@@ -192,6 +193,7 @@ fun PrivacySettingsScreen(
             ) {
                 ThemeMode.entries.forEach { mode ->
                     FilterChip(
+                        modifier = Modifier.testTag("privacy-theme-${mode.name.lowercase()}"),
                         selected = themeMode == mode,
                         onClick = { onThemeModeChanged(mode) },
                         label = {
@@ -209,12 +211,14 @@ fun PrivacySettingsScreen(
             SettingSwitchRow(
                 title = "隐藏金额",
                 description = "首页、流水、统计、预算和账户中的只读金额显示为 ••••",
+                testTag = "privacy-hide-amounts",
                 checked = amountsHidden,
                 onCheckedChange = onAmountsHiddenChanged,
             )
             SettingSwitchRow(
                 title = "应用锁",
                 description = "离开应用 30 秒后，使用设备屏幕锁或生物识别解锁",
+                testTag = "privacy-app-lock",
                 checked = appLockEnabled,
                 onCheckedChange = onAppLockChanged,
             )
@@ -228,6 +232,7 @@ fun PrivacySettingsScreen(
 private fun SettingSwitchRow(
     title: String,
     description: String,
+    testTag: String,
     checked: Boolean,
     onCheckedChange: (Boolean) -> Unit,
 ) {
@@ -240,6 +245,10 @@ private fun SettingSwitchRow(
             Text(title, style = MaterialTheme.typography.titleMedium)
             Text(description, color = MaterialTheme.colorScheme.onSurfaceVariant)
         }
-        Switch(checked = checked, onCheckedChange = onCheckedChange)
+        Switch(
+            checked = checked,
+            onCheckedChange = onCheckedChange,
+            modifier = Modifier.testTag(testTag),
+        )
     }
 }

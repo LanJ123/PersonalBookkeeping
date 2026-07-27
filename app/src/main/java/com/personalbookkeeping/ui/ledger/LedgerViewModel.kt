@@ -11,6 +11,8 @@ import com.personalbookkeeping.domain.model.TransactionFilter
 import com.personalbookkeeping.domain.model.TransactionRecord
 import com.personalbookkeeping.domain.model.TransactionType
 import com.personalbookkeeping.domain.model.MonthPeriod
+import com.personalbookkeeping.domain.model.StatisticsGranularity
+import com.personalbookkeeping.domain.model.StatisticsPeriod
 import com.personalbookkeeping.domain.repository.LedgerRepository
 import com.personalbookkeeping.domain.repository.TransactionRepository
 import java.time.LocalDate
@@ -25,6 +27,7 @@ import kotlinx.coroutines.launch
 
 data class LedgerUiState(
     val filter: TransactionFilter = TransactionFilter(),
+    val selectedMonth: MonthPeriod? = null,
     val options: LedgerFilterOptions = LedgerFilterOptions(emptyList(), emptyList()),
     val isInitializing: Boolean = true,
     val lastDeleted: TransactionRecord? = null,
@@ -66,12 +69,44 @@ class LedgerViewModel(
             mutableState.update { it.copy(message = "日期格式应为 YYYY-MM-DD，且开始日期不能晚于结束日期") }
             return false
         }
-        changeFilter { copy(fromEpochDay = from, toEpochDay = to) }
+        mutableState.update {
+            it.copy(
+                filter = it.filter.copy(fromEpochDay = from, toEpochDay = to),
+                selectedMonth = null,
+            )
+        }
         return true
     }
 
     fun clearFilters() {
-        mutableState.update { it.copy(filter = TransactionFilter()) }
+        mutableState.update { it.copy(filter = TransactionFilter(), selectedMonth = null) }
+    }
+
+    fun selectMonth(yearText: String, month: Int): Boolean {
+        val year = yearText.trim().toIntOrNull()
+        if (year == null || year !in 1900..9999 || month !in 1..12) {
+            mutableState.update { it.copy(message = "请输入 1900 至 9999 年之间的有效年月") }
+            return false
+        }
+        setMonth(MonthPeriod(year, month))
+        return true
+    }
+
+    fun previousMonth() {
+        mutableState.value.selectedMonth?.previous()?.let(::setMonth)
+    }
+
+    fun nextMonth() {
+        mutableState.value.selectedMonth?.next()?.let(::setMonth)
+    }
+
+    fun clearMonth() {
+        mutableState.update {
+            it.copy(
+                filter = it.filter.copy(fromEpochDay = null, toEpochDay = null),
+                selectedMonth = null,
+            )
+        }
     }
 
     fun showMonth(period: MonthPeriod, categoryId: String? = null) {
@@ -83,6 +118,31 @@ class LedgerViewModel(
                     fromEpochDay = period.startEpochDay,
                     toEpochDay = period.endInclusiveEpochDay,
                 ),
+                selectedMonth = period,
+            )
+        }
+    }
+
+    fun showStatistics(
+        period: StatisticsPeriod,
+        type: TransactionType,
+        categoryId: String,
+    ) {
+        mutableState.update {
+            it.copy(
+                filter = TransactionFilter(
+                    type = type,
+                    categoryId = categoryId,
+                    fromEpochDay = period.startEpochDay,
+                    toEpochDay = period.endInclusiveEpochDay,
+                ),
+                selectedMonth = if (
+                    period.granularity == StatisticsGranularity.MONTH
+                ) {
+                    MonthPeriod.from(period.startDate)
+                } else {
+                    null
+                },
             )
         }
     }
@@ -110,6 +170,18 @@ class LedgerViewModel(
 
     private fun changeFilter(block: TransactionFilter.() -> TransactionFilter) {
         mutableState.update { it.copy(filter = it.filter.block()) }
+    }
+
+    private fun setMonth(period: MonthPeriod) {
+        mutableState.update {
+            it.copy(
+                filter = it.filter.copy(
+                    fromEpochDay = period.startEpochDay,
+                    toEpochDay = period.endInclusiveEpochDay,
+                ),
+                selectedMonth = period,
+            )
+        }
     }
 }
 

@@ -11,6 +11,7 @@ import com.personalbookkeeping.domain.repository.TransactionRepository
 import com.personalbookkeeping.domain.validation.TransactionDraft
 import com.personalbookkeeping.domain.validation.TransactionValidationError
 import com.personalbookkeeping.domain.validation.TransactionValidator
+import java.time.Instant
 import java.time.ZoneId
 
 data class CreateTransactionCommand(
@@ -20,6 +21,8 @@ data class CreateTransactionCommand(
     val accountId: String?,
     val targetAccountId: String?,
     val note: String,
+    val occurredAt: Instant? = null,
+    val zoneId: ZoneId? = null,
 )
 
 sealed interface CreateTransactionResult {
@@ -57,8 +60,8 @@ class CreateTransactionUseCase(
         val errors = TransactionValidator.validate(draft)
         if (errors.isNotEmpty()) return CreateTransactionResult.InvalidTransaction(errors)
 
-        val occurredAt = clock.now()
-        val zoneId = zoneIdProvider()
+        val occurredAt = command.occurredAt ?: clock.now()
+        val zoneId = command.zoneId ?: zoneIdProvider()
         val transaction = NewTransaction(
             id = idGenerator.newId(),
             ledgerId = DEFAULT_LEDGER_ID,

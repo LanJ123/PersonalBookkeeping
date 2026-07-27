@@ -11,6 +11,7 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.Card
@@ -30,17 +31,23 @@ import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.layout.onGloballyPositioned
+import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
 import androidx.paging.LoadState
 import androidx.paging.compose.LazyPagingItems
+import com.personalbookkeeping.benchmark.BenchmarkUiSignals
 import com.personalbookkeeping.domain.model.CategoryKind
 import com.personalbookkeeping.domain.model.LedgerTransaction
+import com.personalbookkeeping.domain.model.MonthPeriod
 import com.personalbookkeeping.domain.model.TransactionFilter
 import com.personalbookkeeping.domain.model.TransactionType
 import com.personalbookkeeping.ui.privacy.displayCny
@@ -58,6 +65,10 @@ fun LedgerScreen(
     onAccountChanged: (String?) -> Unit,
     onCategoryChanged: (String?) -> Unit,
     onDateChanged: (String, String) -> Boolean,
+    onMonthSelected: (String, Int) -> Boolean,
+    onPreviousMonth: () -> Unit,
+    onNextMonth: () -> Unit,
+    onClearMonth: () -> Unit,
     onClearFilters: () -> Unit,
     onTransactionClick: (String) -> Unit,
     onRestore: () -> Unit,
@@ -65,6 +76,7 @@ fun LedgerScreen(
     onMessageConsumed: () -> Unit,
 ) {
     var showFilters by remember { mutableStateOf(false) }
+    var showMonthPicker by remember { mutableStateOf(false) }
     LaunchedEffect(state.lastDeleted?.id) {
         if (state.lastDeleted != null) {
             val result = snackbarHostState.showSnackbar("流水已删除", "撤销")
@@ -81,13 +93,28 @@ fun LedgerScreen(
         topBar = { TopAppBar(title = { Text("流水") }) },
         snackbarHost = { SnackbarHost(snackbarHostState) },
     ) { padding ->
-        Column(Modifier.fillMaxSize().padding(padding)) {
+        Column(
+            Modifier
+                .fillMaxSize()
+                .padding(padding)
+                .testTag("ledger-screen"),
+        ) {
             OutlinedTextField(
                 value = state.filter.noteQuery,
                 onValueChange = onQueryChanged,
                 label = { Text("搜索备注") },
                 singleLine = true,
-                modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 8.dp),
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(horizontal = 16.dp, vertical = 8.dp)
+                    .testTag("ledger-search"),
+            )
+            MonthFilterBar(
+                selectedMonth = state.selectedMonth,
+                onOpenPicker = { showMonthPicker = true },
+                onPrevious = onPreviousMonth,
+                onNext = onNextMonth,
+                onClear = onClearMonth,
             )
             LazyRow(
                 contentPadding = PaddingValues(horizontal = 16.dp),
@@ -138,7 +165,11 @@ fun LedgerScreen(
                         val item = transactions[index] ?: return@items
                         val previousDay = if (index > 0) transactions.peek(index - 1)?.localDateEpochDay else null
                         if (previousDay != item.localDateEpochDay) DailyHeader(item)
-                        TransactionCard(item, onTransactionClick)
+                        TransactionCard(
+                            item = item,
+                            onClick = onTransactionClick,
+                            markReady = index == 0,
+                        )
                     }
                     if (transactions.loadState.append is LoadState.Loading) {
                         item { Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.Center) { CircularProgressIndicator() } }
@@ -158,6 +189,101 @@ fun LedgerScreen(
             onDismiss = { showFilters = false },
         )
     }
+    if (showMonthPicker) {
+        MonthPickerDialog(
+            initial = state.selectedMonth ?: MonthPeriod.from(LocalDate.now()),
+            onSelect = { year, month ->
+                onMonthSelected(year, month).also { accepted ->
+                    if (accepted) showMonthPicker = false
+                }
+            },
+            onDismiss = { showMonthPicker = false },
+        )
+    }
+}
+
+@Composable
+private fun MonthFilterBar(
+    selectedMonth: MonthPeriod?,
+    onOpenPicker: () -> Unit,
+    onPrevious: () -> Unit,
+    onNext: () -> Unit,
+    onClear: () -> Unit,
+) {
+    if (selectedMonth == null) {
+        OutlinedButton(
+            onClick = onOpenPicker,
+            modifier = Modifier
+                .padding(horizontal = 16.dp, vertical = 4.dp)
+                .testTag("ledger-month-filter"),
+        ) {
+            Text("按月筛选")
+        }
+        return
+    }
+    Row(
+        Modifier
+            .fillMaxWidth()
+            .padding(horizontal = 16.dp, vertical = 4.dp),
+        horizontalArrangement = Arrangement.spacedBy(6.dp),
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        OutlinedButton(onClick = onPrevious) { Text("上月") }
+        OutlinedButton(
+            onClick = onOpenPicker,
+            modifier = Modifier.weight(1f).testTag("ledger-month-period"),
+        ) {
+            Text(selectedMonth.label)
+        }
+        OutlinedButton(onClick = onNext) { Text("下月") }
+        TextButton(onClick = onClear) { Text("清除") }
+    }
+}
+
+@Composable
+private fun MonthPickerDialog(
+    initial: MonthPeriod,
+    onSelect: (String, Int) -> Unit,
+    onDismiss: () -> Unit,
+) {
+    var yearText by remember(initial.year) { mutableStateOf(initial.year.toString()) }
+    var month by remember(initial.month) { mutableIntStateOf(initial.month) }
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = { Text("选择查询月份") },
+        text = {
+            Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
+                OutlinedTextField(
+                    value = yearText,
+                    onValueChange = { yearText = it.take(4) },
+                    label = { Text("年份") },
+                    singleLine = true,
+                    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
+                )
+                (1..12).chunked(4).forEach { months ->
+                    Row(
+                        Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.spacedBy(6.dp),
+                    ) {
+                        months.forEach { option ->
+                            FilterChip(
+                                selected = month == option,
+                                onClick = { month = option },
+                                label = { Text("${option}月") },
+                                modifier = Modifier.weight(1f),
+                            )
+                        }
+                    }
+                }
+            }
+        },
+        confirmButton = {
+            Button(onClick = { onSelect(yearText, month) }) {
+                Text("查询")
+            }
+        },
+        dismissButton = { TextButton(onClick = onDismiss) { Text("取消") } },
+    )
 }
 
 @Composable
@@ -184,8 +310,20 @@ private fun DailyHeader(item: LedgerTransaction) {
 }
 
 @Composable
-private fun TransactionCard(item: LedgerTransaction, onClick: (String) -> Unit) {
-    Card(Modifier.fillMaxWidth().clickable { onClick(item.id) }) {
+private fun TransactionCard(
+    item: LedgerTransaction,
+    onClick: (String) -> Unit,
+    markReady: Boolean,
+) {
+    Card(
+        Modifier
+            .fillMaxWidth()
+            .testTag("ledger-item")
+            .onGloballyPositioned {
+                if (markReady) BenchmarkUiSignals.mark(BenchmarkUiSignals.LEDGER_READY)
+            }
+            .clickable { onClick(item.id) },
+    ) {
         Row(
             Modifier.fillMaxWidth().padding(14.dp),
             horizontalArrangement = Arrangement.spacedBy(12.dp),

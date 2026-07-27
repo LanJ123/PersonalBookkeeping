@@ -54,4 +54,6 @@ data class RecentTransaction(
     val accountName: String,
     val targetAccountName: String?,
     val occurredAt: Instant,
+    val zoneId: ZoneId = ZoneId.systemDefault(),
+    val localDateEpochDay: Long = occurredAt.atZone(zoneId).toLocalDate().toEpochDay(),
 )

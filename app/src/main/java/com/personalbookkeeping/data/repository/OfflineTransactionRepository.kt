@@ -63,6 +63,8 @@ class OfflineTransactionRepository(
                     accountName = row.accountName,
                     targetAccountName = row.targetAccountName,
                     occurredAt = Instant.ofEpochMilli(row.occurredAtMs),
+                    zoneId = ZoneId.of(row.zoneId),
+                    localDateEpochDay = row.localDateEpochDay,
                 )
             }
         }

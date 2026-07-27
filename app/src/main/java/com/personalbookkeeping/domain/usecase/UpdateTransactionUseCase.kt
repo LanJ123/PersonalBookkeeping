@@ -9,6 +9,8 @@ import com.personalbookkeeping.domain.repository.LedgerRepository
 import com.personalbookkeeping.domain.validation.TransactionDraft
 import com.personalbookkeeping.domain.validation.TransactionValidationError
 import com.personalbookkeeping.domain.validation.TransactionValidator
+import java.time.Instant
+import java.time.ZoneId
 
 data class UpdateTransactionCommand(
     val id: String,
@@ -18,6 +20,8 @@ data class UpdateTransactionCommand(
     val accountId: String?,
     val targetAccountId: String?,
     val note: String,
+    val occurredAt: Instant? = null,
+    val zoneId: ZoneId? = null,
 )
 
 sealed interface UpdateTransactionResult {
@@ -44,6 +48,8 @@ class UpdateTransactionUseCase(
             TransactionDraft(command.type, amount, categoryId, command.accountId, targetId, note),
         )
         if (errors.isNotEmpty()) return UpdateTransactionResult.InvalidTransaction(errors)
+        val occurredAt = command.occurredAt ?: current.occurredAt
+        val zoneId = command.zoneId ?: current.zoneId
         repository.updateTransaction(
             current.copy(
                 type = command.type,
@@ -52,6 +58,9 @@ class UpdateTransactionUseCase(
                 accountId = requireNotNull(command.accountId),
                 targetAccountId = targetId,
                 note = note,
+                occurredAt = occurredAt,
+                zoneId = zoneId,
+                localDateEpochDay = occurredAt.atZone(zoneId).toLocalDate().toEpochDay(),
                 updatedAt = clock.now(),
             ),
         )
