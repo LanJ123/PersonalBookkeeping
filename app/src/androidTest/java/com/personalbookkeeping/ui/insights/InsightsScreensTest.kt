@@ -1,6 +1,7 @@
 package com.personalbookkeeping.ui.insights
 
 import androidx.compose.ui.test.assertIsDisplayed
+import androidx.compose.ui.test.hasTestTag
 import androidx.compose.ui.test.hasText
 import androidx.compose.ui.test.junit4.v2.createComposeRule
 import androidx.compose.ui.test.onNodeWithTag
@@ -146,6 +147,8 @@ class InsightsScreensTest {
         composeRule.onNodeWithText("餐饮").assertIsDisplayed()
         composeRule.onNodeWithText("60%").assertIsDisplayed()
         composeRule.onNodeWithText("2笔").assertIsDisplayed()
+        composeRule.onNodeWithTag("statistics-list")
+            .performScrollToNode(hasTestTag("statistics-type-income"))
         composeRule.onNodeWithTag("statistics-type-income").performClick()
         composeRule.onNodeWithTag("statistics-list").performScrollToNode(hasText("工资"))
         composeRule.onNodeWithText("工资").assertIsDisplayed()

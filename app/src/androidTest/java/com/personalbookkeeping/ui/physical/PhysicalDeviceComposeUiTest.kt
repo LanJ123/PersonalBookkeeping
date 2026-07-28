@@ -188,15 +188,18 @@ class PhysicalDeviceComposeUiTest {
         get() = isChecked || isSelected
 
     private fun findSaveButton(): UiObject2 {
-        device.wait(Until.findObject(By.res(SAVE_BUTTON_TAG)), SHORT_UI_TIMEOUT_MS)
-            ?.let { return it }
-        device.swipe(
-            device.displayWidth / 2,
-            device.displayHeight * 3 / 4,
-            device.displayWidth / 2,
-            device.displayHeight / 4,
-            40,
-        )
+        repeat(MAX_SAVE_BUTTON_SCROLLS) {
+            device.wait(Until.findObject(By.res(SAVE_BUTTON_TAG)), SHORT_UI_TIMEOUT_MS)
+                ?.let { return it }
+            device.swipe(
+                device.displayWidth / 2,
+                device.displayHeight * 3 / 4,
+                device.displayWidth / 2,
+                device.displayHeight / 4,
+                40,
+            )
+            device.waitForIdle()
+        }
         return waitForResource(SAVE_BUTTON_TAG)
     }
 
@@ -211,6 +214,7 @@ class PhysicalDeviceComposeUiTest {
         const val SHORT_UI_TIMEOUT_MS = 2_000L
         const val DOCUMENT_PICKER_TIMEOUT_MS = 30_000L
         const val POLL_INTERVAL_MS = 100L
+        const val MAX_SAVE_BUTTON_SCROLLS = 4
         val THEME_TAGS = listOf(
             "privacy-theme-system",
             "privacy-theme-light",
