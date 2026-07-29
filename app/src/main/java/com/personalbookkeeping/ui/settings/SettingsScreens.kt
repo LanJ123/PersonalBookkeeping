@@ -7,6 +7,7 @@ import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
@@ -16,7 +17,6 @@ import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
-import androidx.compose.material3.FilterChip
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.OutlinedTextField
@@ -36,6 +36,9 @@ import androidx.compose.ui.unit.dp
 import java.time.LocalDate
 import java.time.format.DateTimeFormatter
 import com.personalbookkeeping.domain.model.ThemeMode
+import com.personalbookkeeping.ui.theme.IosSegmentOption
+import com.personalbookkeeping.ui.theme.IosSegmentedControl
+import com.personalbookkeeping.ui.theme.IosBackButton
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -74,7 +77,9 @@ fun DataTransferScreen(
     Column(Modifier.fillMaxSize()) {
         TopAppBar(
             title = { Text("数据与备份") },
-            navigationIcon = { TextButton(onClick = onBack) { Text("返回") } },
+            navigationIcon = { IosBackButton(onBack) },
+            expandedHeight = 52.dp,
+            windowInsets = WindowInsets(0.dp),
         )
         Column(
             Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(20.dp),
@@ -180,34 +185,29 @@ fun PrivacySettingsScreen(
     Column(Modifier.fillMaxSize()) {
         TopAppBar(
             title = { Text("隐私与安全") },
-            navigationIcon = { TextButton(onClick = onBack) { Text("返回") } },
+            navigationIcon = { IosBackButton(onBack) },
+            expandedHeight = 52.dp,
+            windowInsets = WindowInsets(0.dp),
         )
         Column(
             Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(20.dp),
             verticalArrangement = Arrangement.spacedBy(20.dp),
         ) {
             Text("主题", style = MaterialTheme.typography.titleMedium)
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.spacedBy(8.dp),
-            ) {
-                ThemeMode.entries.forEach { mode ->
-                    FilterChip(
-                        modifier = Modifier.testTag("privacy-theme-${mode.name.lowercase()}"),
-                        selected = themeMode == mode,
-                        onClick = { onThemeModeChanged(mode) },
-                        label = {
-                            Text(
-                                when (mode) {
-                                    ThemeMode.SYSTEM -> "跟随系统"
-                                    ThemeMode.LIGHT -> "浅色"
-                                    ThemeMode.DARK -> "深色"
-                                },
-                            )
+            IosSegmentedControl(
+                options = ThemeMode.entries.map { mode ->
+                    IosSegmentOption(
+                        label = when (mode) {
+                            ThemeMode.SYSTEM -> "跟随系统"
+                            ThemeMode.LIGHT -> "浅色"
+                            ThemeMode.DARK -> "深色"
                         },
+                        testTag = "privacy-theme-${mode.name.lowercase()}",
                     )
-                }
-            }
+                },
+                selectedIndex = ThemeMode.entries.indexOf(themeMode),
+                onSelected = { onThemeModeChanged(ThemeMode.entries[it]) },
+            )
             SettingSwitchRow(
                 title = "隐藏金额",
                 description = "首页、流水、统计、预算和账户中的只读金额显示为 ••••",

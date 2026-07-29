@@ -5,6 +5,7 @@ import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
@@ -54,6 +55,9 @@ import com.personalbookkeeping.domain.model.AccountOption
 import com.personalbookkeeping.domain.model.CategoryOption
 import com.personalbookkeeping.domain.model.TransactionType
 import com.personalbookkeeping.domain.validation.TransactionValidationError
+import com.personalbookkeeping.ui.theme.IosSegmentOption
+import com.personalbookkeeping.ui.theme.IosSegmentedControl
+import com.personalbookkeeping.ui.theme.IosBackButton
 import java.time.Instant
 import java.time.ZoneOffset
 import java.time.format.DateTimeFormatter
@@ -93,8 +97,10 @@ fun TransactionEditorScreen(
                     }
                 },
                 navigationIcon = {
-                    if (onBack != null) TextButton(onClick = onBack) { Text("返回") }
+                    if (onBack != null) IosBackButton(onBack)
                 },
+                expandedHeight = 52.dp,
+                windowInsets = WindowInsets(0.dp),
             )
         },
     ) { innerPadding ->
@@ -390,18 +396,12 @@ private fun TransactionTypeSelector(
     selected: TransactionType,
     onSelected: (TransactionType) -> Unit,
 ) {
-    Row(
-        modifier = Modifier.fillMaxWidth(),
-        horizontalArrangement = Arrangement.spacedBy(8.dp),
-    ) {
-        TransactionType.entries.forEach { type ->
-            FilterChip(
-                selected = type == selected,
-                onClick = { onSelected(type) },
-                label = { Text(stringResourceSafe(type.labelResource())) },
-            )
-        }
-    }
+    val entries = TransactionType.entries
+    IosSegmentedControl(
+        options = entries.map { IosSegmentOption(stringResourceSafe(it.labelResource())) },
+        selectedIndex = entries.indexOf(selected),
+        onSelected = { onSelected(entries[it]) },
+    )
 }
 
 @Composable

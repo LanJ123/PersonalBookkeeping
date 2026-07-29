@@ -144,8 +144,10 @@ class LedgerScreenTest {
         }
 
         composeRule.waitUntil(timeoutMillis = 5_000) {
-            composeRule.onAllNodesWithTag("ledger-day-$july25").fetchSemanticsNodes().isNotEmpty()
+            composeRule.onAllNodesWithTag("ledger-list").fetchSemanticsNodes().isNotEmpty()
         }
+        composeRule.onNodeWithTag("ledger-list")
+            .performScrollToNode(hasTestTag("ledger-day-$july25"))
         composeRule.onNodeWithTag("ledger-day-$july25").assertIsDisplayed()
         composeRule.onAllNodesWithText("7月25日 星期六").assertCountEquals(1)
         composeRule.onNodeWithText("支 ¥110.66  收 ¥100.00").assertIsDisplayed()

@@ -4,6 +4,7 @@ import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
@@ -42,6 +43,7 @@ import com.personalbookkeeping.domain.model.ManagedAccount
 import com.personalbookkeeping.domain.model.ManagedCategory
 import com.personalbookkeeping.domain.model.MoveDirection
 import com.personalbookkeeping.ui.privacy.displayCny
+import com.personalbookkeeping.ui.theme.IosBackButton
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -60,7 +62,9 @@ fun AccountsScreen(
     Column(Modifier.fillMaxSize()) {
         TopAppBar(
             title = { Text("账户管理") },
-            navigationIcon = { TextButton(onClick = onBack) { Text("返回") } },
+            navigationIcon = { IosBackButton(onBack) },
+            expandedHeight = 52.dp,
+            windowInsets = WindowInsets(0.dp),
             actions = { TextButton(onClick = { editing = null; showDialog = true }) { Text("新增") } },
         )
         if (state.isLoading) CenterLoading() else LazyColumn(
@@ -161,7 +165,9 @@ fun CategoriesScreen(
     Column(Modifier.fillMaxSize()) {
         TopAppBar(
             title = { Text("分类管理") },
-            navigationIcon = { TextButton(onClick = onBack) { Text("返回") } },
+            navigationIcon = { IosBackButton(onBack) },
+            expandedHeight = 52.dp,
+            windowInsets = WindowInsets(0.dp),
             actions = { TextButton(onClick = { editing = null; showDialog = true }) { Text("新增") } },
         )
         Row(Modifier.padding(horizontal = 16.dp), horizontalArrangement = Arrangement.spacedBy(8.dp)) {

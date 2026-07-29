@@ -1,33 +1,45 @@
 package com.personalbookkeeping.ui.navigation
 
+import androidx.compose.foundation.Canvas
+import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.heightIn
+import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.verticalScroll
-import androidx.compose.material3.Button
-import androidx.compose.material3.ExperimentalMaterial3Api
-import androidx.compose.material3.FloatingActionButton
+import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.NavigationBar
-import androidx.compose.material3.NavigationBarItem
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.SnackbarHostState
+import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
-import androidx.compose.material3.TextButton
-import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.Path
+import androidx.compose.ui.graphics.StrokeCap
+import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.platform.testTag
-import androidx.compose.ui.semantics.clearAndSetSemantics
 import androidx.compose.ui.semantics.semantics
+import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.text
 import androidx.compose.ui.semantics.testTagsAsResourceId
+import androidx.compose.ui.text.AnnotatedString
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
@@ -60,6 +72,8 @@ import com.personalbookkeeping.ui.settings.SettingsViewModelFactory
 import com.personalbookkeeping.ui.transaction.TransactionEditorScreen
 import com.personalbookkeeping.ui.transaction.TransactionEditorViewModel
 import com.personalbookkeeping.ui.transaction.TransactionEditorViewModelFactory
+import com.personalbookkeeping.ui.theme.IosSettingsGroup
+import com.personalbookkeeping.ui.theme.IosSettingsRow
 import java.util.UUID
 import kotlinx.serialization.Serializable
 
@@ -80,16 +94,18 @@ sealed interface AppNavKey : NavKey
 
 private data class RootTab(
     val key: AppNavKey,
-    val glyph: String,
+    val icon: RootTabIcon,
     val label: String,
     val testTag: String,
 )
 
+private enum class RootTabIcon { HOME, LEDGER, STATISTICS, SETTINGS }
+
 private val rootTabs = listOf(
-    RootTab(HomeKey, "⌂", "首页", "root-tab-home"),
-    RootTab(LedgerKey, "≡", "流水", "root-tab-ledger"),
-    RootTab(StatisticsKey, "◔", "统计", "root-tab-statistics"),
-    RootTab(SettingsKey, "⚙", "设置", "root-tab-settings"),
+    RootTab(HomeKey, RootTabIcon.HOME, "首页", "root-tab-home"),
+    RootTab(LedgerKey, RootTabIcon.LEDGER, "流水", "root-tab-ledger"),
+    RootTab(StatisticsKey, RootTabIcon.STATISTICS, "统计", "root-tab-statistics"),
+    RootTab(SettingsKey, RootTabIcon.SETTINGS, "设置", "root-tab-settings"),
 )
 
 @Composable
@@ -152,24 +168,12 @@ fun BookkeepingApp(
     Scaffold(
         modifier = Modifier.semantics { testTagsAsResourceId = true },
         bottomBar = {
-            if (isRoot) NavigationBar {
-                rootTabs.forEach { tab ->
-                    NavigationBarItem(
-                        modifier = Modifier.testTag(tab.testTag),
-                        selected = current == tab.key,
-                        onClick = { switchRoot(tab.key) },
-                        icon = { Text(tab.glyph, Modifier.clearAndSetSemantics { }) },
-                        label = { Text(tab.label) },
-                    )
-                }
-            }
-        },
-        floatingActionButton = {
             if (isRoot) {
-                FloatingActionButton(
-                    onClick = { openEditor() },
-                    modifier = Modifier.testTag("root-add-transaction"),
-                ) { Text("＋记一笔") }
+                IosBottomBar(
+                    current = current,
+                    onTabSelected = ::switchRoot,
+                    onAdd = { openEditor() },
+                )
             }
         },
     ) { outerPadding ->
@@ -335,7 +339,158 @@ fun BookkeepingApp(
         )
     }
 }
-@OptIn(ExperimentalMaterial3Api::class)
+
+@Composable
+private fun IosBottomBar(
+    current: NavKey?,
+    onTabSelected: (AppNavKey) -> Unit,
+    onAdd: () -> Unit,
+) {
+    Surface(color = MaterialTheme.colorScheme.surface) {
+        Column {
+            HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant)
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(76.dp)
+                    .padding(horizontal = 8.dp, vertical = 6.dp),
+                verticalAlignment = Alignment.Top,
+            ) {
+                IosTabItem(rootTabs[0], current == rootTabs[0].key, onTabSelected)
+                IosTabItem(rootTabs[1], current == rootTabs[1].key, onTabSelected)
+                Box(
+                    modifier = Modifier.weight(1f),
+                    contentAlignment = Alignment.TopCenter,
+                ) {
+                    Box(
+                        modifier = Modifier
+                            .size(54.dp)
+                            .testTag("root-add-transaction")
+                            .clip(CircleShape)
+                            .background(MaterialTheme.colorScheme.primary)
+                            .semantics {
+                                text = AnnotatedString("＋记一笔")
+                                contentDescription = "新增流水"
+                            }
+                            .clickable(onClick = onAdd),
+                        contentAlignment = Alignment.Center,
+                    ) {
+                        Canvas(Modifier.size(25.dp)) {
+                            val center = Offset(size.width / 2f, size.height / 2f)
+                            drawLine(
+                                Color.White,
+                                Offset(center.x, 2f),
+                                Offset(center.x, size.height - 2f),
+                                strokeWidth = 3.dp.toPx(),
+                                cap = StrokeCap.Round,
+                            )
+                            drawLine(
+                                Color.White,
+                                Offset(2f, center.y),
+                                Offset(size.width - 2f, center.y),
+                                strokeWidth = 3.dp.toPx(),
+                                cap = StrokeCap.Round,
+                            )
+                        }
+                    }
+                }
+                IosTabItem(rootTabs[2], current == rootTabs[2].key, onTabSelected)
+                IosTabItem(rootTabs[3], current == rootTabs[3].key, onTabSelected)
+            }
+        }
+    }
+}
+
+@Composable
+private fun androidx.compose.foundation.layout.RowScope.IosTabItem(
+    tab: RootTab,
+    selected: Boolean,
+    onSelected: (AppNavKey) -> Unit,
+) {
+    val color = if (selected) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant
+    Column(
+        modifier = Modifier
+            .weight(1f)
+            .testTag(tab.testTag)
+            .clickable { onSelected(tab.key) }
+            .padding(vertical = 3.dp),
+        horizontalAlignment = Alignment.CenterHorizontally,
+        verticalArrangement = Arrangement.spacedBy(2.dp),
+    ) {
+        IosTabIcon(tab.icon, color)
+        Text(
+            tab.label,
+            color = color,
+            style = MaterialTheme.typography.labelSmall,
+            fontWeight = if (selected) FontWeight.SemiBold else FontWeight.Medium,
+        )
+    }
+}
+
+@Composable
+private fun IosTabIcon(icon: RootTabIcon, color: Color) {
+    Canvas(Modifier.size(25.dp)) {
+        val stroke = 2.dp.toPx()
+        when (icon) {
+            RootTabIcon.HOME -> {
+                val roof = Path().apply {
+                    moveTo(size.width * .12f, size.height * .48f)
+                    lineTo(size.width * .5f, size.height * .15f)
+                    lineTo(size.width * .88f, size.height * .48f)
+                }
+                drawPath(roof, color, style = Stroke(stroke, cap = StrokeCap.Round))
+                drawRoundRect(
+                    color,
+                    topLeft = Offset(size.width * .22f, size.height * .43f),
+                    size = androidx.compose.ui.geometry.Size(size.width * .56f, size.height * .43f),
+                    cornerRadius = androidx.compose.ui.geometry.CornerRadius(2.dp.toPx()),
+                    style = Stroke(stroke),
+                )
+            }
+            RootTabIcon.LEDGER -> {
+                listOf(.28f, .5f, .72f).forEach { y ->
+                    drawCircle(color, radius = stroke * .65f, center = Offset(size.width * .17f, size.height * y))
+                    drawLine(
+                        color,
+                        Offset(size.width * .31f, size.height * y),
+                        Offset(size.width * .84f, size.height * y),
+                        stroke,
+                        StrokeCap.Round,
+                    )
+                }
+            }
+            RootTabIcon.STATISTICS -> {
+                val barWidth = size.width * .16f
+                listOf(.62f, .38f, .16f).forEachIndexed { index, top ->
+                    drawRoundRect(
+                        color,
+                        topLeft = Offset(size.width * (.18f + index * .25f), size.height * top),
+                        size = androidx.compose.ui.geometry.Size(barWidth, size.height * (.84f - top)),
+                        cornerRadius = androidx.compose.ui.geometry.CornerRadius(barWidth / 2f),
+                    )
+                }
+            }
+            RootTabIcon.SETTINGS -> {
+                drawCircle(color, radius = size.minDimension * .33f, style = Stroke(stroke))
+                drawCircle(color, radius = size.minDimension * .10f, style = Stroke(stroke))
+                repeat(8) { index ->
+                    val angle = Math.toRadians((index * 45).toDouble())
+                    val start = size.minDimension * .36f
+                    val end = size.minDimension * .47f
+                    val center = Offset(size.width / 2f, size.height / 2f)
+                    drawLine(
+                        color,
+                        Offset(center.x + kotlin.math.cos(angle).toFloat() * start, center.y + kotlin.math.sin(angle).toFloat() * start),
+                        Offset(center.x + kotlin.math.cos(angle).toFloat() * end, center.y + kotlin.math.sin(angle).toFloat() * end),
+                        stroke,
+                        StrokeCap.Round,
+                    )
+                }
+            }
+        }
+    }
+}
+
 @Composable
 private fun SettingsScreen(
     onAccounts: () -> Unit,
@@ -344,18 +499,35 @@ private fun SettingsScreen(
     onDataTransfer: () -> Unit,
     onPrivacy: () -> Unit,
 ) {
-    Column(Modifier.fillMaxSize()) {
-        TopAppBar(title = { Text("设置") })
-        Column(
-            Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(20.dp),
-            verticalArrangement = Arrangement.spacedBy(12.dp),
-        ) {
-            Button(onClick = onAccounts, modifier = Modifier.fillMaxWidth().heightIn(min = 64.dp)) { Text("账户管理") }
-            Button(onClick = onCategories, modifier = Modifier.fillMaxWidth().heightIn(min = 64.dp)) { Text("分类管理") }
-            Button(onClick = onBudgets, modifier = Modifier.fillMaxWidth().heightIn(min = 64.dp)) { Text("预算管理") }
-            Button(onClick = onDataTransfer, modifier = Modifier.fillMaxWidth().heightIn(min = 64.dp)) { Text("数据与备份") }
-            Button(onClick = onPrivacy, modifier = Modifier.fillMaxWidth().heightIn(min = 64.dp)) { Text("隐私与安全") }
-            Text("数据仅保存在本机，不会自动上传。", color = MaterialTheme.colorScheme.onSurfaceVariant)
+    Column(
+        Modifier
+            .fillMaxSize()
+            .verticalScroll(rememberScrollState())
+            .padding(horizontal = 20.dp),
+        verticalArrangement = Arrangement.spacedBy(12.dp),
+    ) {
+        Text(
+            "设置",
+            modifier = Modifier.padding(top = 8.dp, bottom = 4.dp),
+            style = MaterialTheme.typography.headlineLarge,
+            fontWeight = FontWeight.Bold,
+        )
+        Text("财务", style = MaterialTheme.typography.labelLarge, color = MaterialTheme.colorScheme.onSurfaceVariant)
+        IosSettingsGroup {
+            IosSettingsRow("账户管理", "管理现金、银行卡和其他资金账户", "¥", Color(0xFF007AFF), onAccounts)
+            IosSettingsRow("分类管理", "整理支出与收入分类", "#", Color(0xFFFF9500), onCategories)
+            IosSettingsRow("预算管理", "设置月度分类预算", "◎", Color(0xFF34C759), onBudgets, showDivider = false)
         }
+        Text("数据与安全", style = MaterialTheme.typography.labelLarge, color = MaterialTheme.colorScheme.onSurfaceVariant)
+        IosSettingsGroup {
+            IosSettingsRow("数据与备份", "导入、导出和恢复本地数据", "⇅", Color(0xFF5856D6), onDataTransfer)
+            IosSettingsRow("隐私与安全", "金额隐藏、主题与应用锁", "✓", Color(0xFF8E8E93), onPrivacy, showDivider = false)
+        }
+        Text(
+            "数据仅保存在本机，不会自动上传。",
+            modifier = Modifier.padding(start = 4.dp, end = 4.dp, bottom = 24.dp),
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+            style = MaterialTheme.typography.bodySmall,
+        )
     }
 }

@@ -5,6 +5,7 @@ import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
@@ -93,7 +94,7 @@ fun LedgerScreen(
         }
     }
     Scaffold(
-        topBar = { TopAppBar(title = { Text("流水") }) },
+        contentWindowInsets = WindowInsets(0.dp),
         snackbarHost = { SnackbarHost(snackbarHostState) },
     ) { padding ->
         Column(
@@ -102,6 +103,12 @@ fun LedgerScreen(
                 .padding(padding)
                 .testTag("ledger-screen"),
         ) {
+            Text(
+                "流水",
+                modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp),
+                style = MaterialTheme.typography.headlineLarge,
+                fontWeight = FontWeight.Bold,
+            )
             OutlinedTextField(
                 value = state.filter.noteQuery,
                 onValueChange = onQueryChanged,
@@ -148,7 +155,7 @@ fun LedgerScreen(
                     "没有符合条件的流水",
                     onClearFilters,
                 )
-                transactions.loadState.refresh is LoadState.Loading ->
+                transactions.itemCount == 0 && transactions.loadState.refresh is LoadState.Loading ->
                     Column(
                         Modifier.fillMaxSize(),
                         verticalArrangement = Arrangement.Center,

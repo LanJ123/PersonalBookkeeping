@@ -3,6 +3,7 @@ package com.personalbookkeeping.ui.ledger
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
@@ -28,6 +29,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import com.personalbookkeeping.domain.model.TransactionType
 import com.personalbookkeeping.ui.privacy.displayCny
+import com.personalbookkeeping.ui.theme.IosBackButton
 import java.time.ZoneId
 import java.time.format.DateTimeFormatter
 
@@ -44,7 +46,9 @@ fun TransactionDetailScreen(
         topBar = {
             TopAppBar(
                 title = { Text("流水详情") },
-                navigationIcon = { TextButton(onClick = onBack) { Text("返回") } },
+                navigationIcon = { IosBackButton(onBack) },
+                expandedHeight = 52.dp,
+                windowInsets = WindowInsets(0.dp),
             )
         },
     ) { padding ->

@@ -9,6 +9,7 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -20,9 +21,9 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.Card
+import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
-import androidx.compose.material3.FilterChip
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.MaterialTheme
@@ -71,6 +72,9 @@ import com.personalbookkeeping.domain.model.StatisticsTrendPoint
 import com.personalbookkeeping.domain.model.TransactionType
 import com.personalbookkeeping.ui.privacy.displayCny
 import com.personalbookkeeping.ui.privacy.LocalAmountsHidden
+import com.personalbookkeeping.ui.theme.IosSegmentOption
+import com.personalbookkeeping.ui.theme.IosSegmentedControl
+import com.personalbookkeeping.ui.theme.IosBackButton
 import java.time.LocalDate
 import java.time.format.DateTimeFormatter
 import java.util.Locale
@@ -88,20 +92,26 @@ fun HomeScreen(
     state: HomeUiState,
     onTransactionClick: (String) -> Unit = {},
 ) {
-    Scaffold(
-        topBar = { TopAppBar(title = { Text("个人记账") }) },
-    ) { padding ->
-        if (state.isLoading) CenterLoading(padding) else LazyColumn(
+    if (state.isLoading) {
+        CenterLoading(PaddingValues(0.dp))
+    } else {
+        LazyColumn(
             modifier = Modifier
                 .fillMaxSize()
-                .padding(padding)
                 .testTag("home-list")
                 .onGloballyPositioned {
                     BenchmarkUiSignals.mark(BenchmarkUiSignals.HOME_READY)
                 },
-            contentPadding = PaddingValues(16.dp),
+            contentPadding = PaddingValues(horizontal = 16.dp, vertical = 8.dp),
             verticalArrangement = Arrangement.spacedBy(12.dp),
         ) {
+            item {
+                Text(
+                    "个人记账",
+                    style = MaterialTheme.typography.headlineLarge,
+                    fontWeight = FontWeight.Bold,
+                )
+            }
             item { HomeOverviewCard(state) }
             state.message?.let { message -> item { EmptyCard(message) } }
             item {
@@ -133,15 +143,23 @@ fun StatisticsScreen(
     onNextPeriod: () -> Unit,
     onCategoryClick: (StatisticsPeriod, TransactionType, String) -> Unit,
 ) {
-    Scaffold(topBar = { TopAppBar(title = { Text("统计") }) }) { padding ->
-        if (state.isLoading) CenterLoading(padding) else LazyColumn(
+    if (state.isLoading) {
+        CenterLoading(PaddingValues(0.dp))
+    } else {
+        LazyColumn(
             modifier = Modifier
                 .fillMaxSize()
-                .padding(padding)
                 .testTag("statistics-list"),
-            contentPadding = PaddingValues(16.dp),
+            contentPadding = PaddingValues(horizontal = 16.dp, vertical = 8.dp),
             verticalArrangement = Arrangement.spacedBy(12.dp),
         ) {
+            item {
+                Text(
+                    "统计",
+                    style = MaterialTheme.typography.headlineLarge,
+                    fontWeight = FontWeight.Bold,
+                )
+            }
             item {
                 StatisticsGranularitySelector(
                     selected = state.period.granularity,
@@ -203,14 +221,18 @@ fun StatisticsScreen(
 
 @Composable
 private fun HomeOverviewCard(state: HomeUiState) {
-    Card(Modifier.fillMaxWidth()) {
+    Card(
+        modifier = Modifier.fillMaxWidth(),
+        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.primaryContainer),
+    ) {
         Column(Modifier.padding(20.dp), verticalArrangement = Arrangement.spacedBy(18.dp)) {
             Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
-                Text("今日支出", color = MaterialTheme.colorScheme.onSurfaceVariant)
+                Text("今日支出", color = MaterialTheme.colorScheme.onPrimaryContainer)
                 Text(
                     state.todayExpense.displayCny(),
                     style = MaterialTheme.typography.displaySmall,
                     fontWeight = FontWeight.Bold,
+                    color = MaterialTheme.colorScheme.onPrimaryContainer,
                 )
             }
             Row(
@@ -490,16 +512,12 @@ private fun StatisticsGranularitySelector(
     selected: StatisticsGranularity,
     onSelected: (StatisticsGranularity) -> Unit,
 ) {
-    Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-        StatisticsGranularity.entries.forEach { granularity ->
-            FilterChip(
-                selected = granularity == selected,
-                onClick = { onSelected(granularity) },
-                label = { Text(granularity.tabLabel()) },
-                modifier = Modifier.weight(1f),
-            )
-        }
-    }
+    val entries = StatisticsGranularity.entries
+    IosSegmentedControl(
+        options = entries.map { IosSegmentOption(it.tabLabel()) },
+        selectedIndex = entries.indexOf(selected),
+        onSelected = { onSelected(entries[it]) },
+    )
 }
 
 @Composable
@@ -507,21 +525,17 @@ private fun StatisticsTypeSelector(
     selected: TransactionType,
     onSelected: (TransactionType) -> Unit,
 ) {
-    Row(
-        Modifier.fillMaxWidth(),
-        horizontalArrangement = Arrangement.spacedBy(8.dp),
-    ) {
-        listOf(TransactionType.EXPENSE, TransactionType.INCOME).forEach { type ->
-            FilterChip(
-                selected = type == selected,
-                onClick = { onSelected(type) },
-                label = { Text(type.compositionLabel()) },
-                modifier = Modifier
-                    .weight(1f)
-                    .testTag("statistics-type-${type.name.lowercase()}"),
+    val entries = listOf(TransactionType.EXPENSE, TransactionType.INCOME)
+    IosSegmentedControl(
+        options = entries.map { type ->
+            IosSegmentOption(
+                label = type.compositionLabel(),
+                testTag = "statistics-type-${type.name.lowercase()}",
             )
-        }
-    }
+        },
+        selectedIndex = entries.indexOf(selected),
+        onSelected = { onSelected(entries[it]) },
+    )
 }
 
 @Composable
@@ -867,7 +881,14 @@ fun BudgetsScreen(
     var editing by remember { mutableStateOf<BudgetEditTarget?>(null) }
     MessageEffect(state, snackbarHostState, onMessageConsumed)
     Scaffold(
-        topBar = { TopAppBar(title = { Text("预算管理") }, navigationIcon = { TextButton(onClick = onBack) { Text("返回") } }) },
+        topBar = {
+            TopAppBar(
+                title = { Text("预算管理") },
+                navigationIcon = { IosBackButton(onBack) },
+                expandedHeight = 52.dp,
+                windowInsets = WindowInsets(0.dp),
+            )
+        },
         snackbarHost = { SnackbarHost(snackbarHostState) },
     ) { padding ->
         if (state.isLoading) CenterLoading(padding) else LazyColumn(
