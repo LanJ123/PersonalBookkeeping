@@ -334,13 +334,20 @@ private fun LedgerDaySegment(
         Modifier
             .padding(top = if (isFirstOfDay) 12.dp else 0.dp)
             .fillMaxWidth()
+            .then(
+                if (isFirstOfDay) {
+                    Modifier.testTag("ledger-day-${item.localDateEpochDay}")
+                } else {
+                    Modifier
+                },
+            )
             .onGloballyPositioned {
                 if (markReady) BenchmarkUiSignals.mark(BenchmarkUiSignals.LEDGER_READY)
             },
         shape = shape,
         tonalElevation = 1.dp,
     ) {
-        Column(Modifier.then(if (isFirstOfDay) Modifier.testTag("ledger-day-${item.localDateEpochDay}") else Modifier)) {
+        Column {
             if (isFirstOfDay) {
                 Row(
                     Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 14.dp),
