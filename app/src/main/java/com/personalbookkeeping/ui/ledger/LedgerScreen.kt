@@ -11,13 +11,14 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
-import androidx.compose.material3.Card
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.FilterChip
+import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.OutlinedTextField
@@ -25,6 +26,7 @@ import androidx.compose.material3.Scaffold
 import androidx.compose.material3.SnackbarHost
 import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.SnackbarResult
+import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.material3.TopAppBar
@@ -53,6 +55,7 @@ import com.personalbookkeeping.domain.model.TransactionType
 import com.personalbookkeeping.ui.privacy.displayCny
 import java.time.LocalDate
 import java.time.format.DateTimeFormatter
+import java.util.Locale
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -157,17 +160,22 @@ fun LedgerScreen(
                     if (state.filter.isActive) onClearFilters else null,
                 )
                 else -> LazyColumn(
-                    modifier = Modifier.fillMaxSize(),
+                    modifier = Modifier.fillMaxSize().testTag("ledger-list"),
                     contentPadding = PaddingValues(16.dp),
-                    verticalArrangement = Arrangement.spacedBy(8.dp),
                 ) {
                     items(transactions.itemCount) { index ->
                         val item = transactions[index] ?: return@items
                         val previousDay = if (index > 0) transactions.peek(index - 1)?.localDateEpochDay else null
-                        if (previousDay != item.localDateEpochDay) DailyHeader(item)
-                        TransactionCard(
+                        val nextDay = if (index < transactions.itemCount - 1) {
+                            transactions.peek(index + 1)?.localDateEpochDay
+                        } else {
+                            null
+                        }
+                        LedgerDaySegment(
                             item = item,
                             onClick = onTransactionClick,
+                            isFirstOfDay = previousDay != item.localDateEpochDay,
+                            isLastOfDay = nextDay != item.localDateEpochDay,
                             markReady = index == 0,
                         )
                     }
@@ -299,51 +307,101 @@ private fun EmptyLedger(message: String, onClear: (() -> Unit)? = null) {
 }
 
 @Composable
-private fun DailyHeader(item: LedgerTransaction) {
-    Row(
-        Modifier.fillMaxWidth().padding(top = 10.dp, bottom = 2.dp),
-        horizontalArrangement = Arrangement.SpaceBetween,
+private fun LedgerDaySegment(
+    item: LedgerTransaction,
+    onClick: (String) -> Unit,
+    isFirstOfDay: Boolean,
+    isLastOfDay: Boolean,
+    markReady: Boolean,
+) {
+    val shape = when {
+        isFirstOfDay && isLastOfDay -> RoundedCornerShape(16.dp)
+        isFirstOfDay -> RoundedCornerShape(
+            topStart = 16.dp,
+            topEnd = 16.dp,
+            bottomEnd = 0.dp,
+            bottomStart = 0.dp,
+        )
+        isLastOfDay -> RoundedCornerShape(
+            topStart = 0.dp,
+            topEnd = 0.dp,
+            bottomEnd = 16.dp,
+            bottomStart = 16.dp,
+        )
+        else -> RoundedCornerShape(0.dp)
+    }
+    Surface(
+        Modifier
+            .padding(top = if (isFirstOfDay) 12.dp else 0.dp)
+            .fillMaxWidth()
+            .onGloballyPositioned {
+                if (markReady) BenchmarkUiSignals.mark(BenchmarkUiSignals.LEDGER_READY)
+            },
+        shape = shape,
+        tonalElevation = 1.dp,
     ) {
-        Text(LocalDate.ofEpochDay(item.localDateEpochDay).format(DateTimeFormatter.ofPattern("M月d日 EEEE")), fontWeight = FontWeight.SemiBold)
-        Text("支 ${item.dailyExpense.displayCny()} · 收 ${item.dailyIncome.displayCny()}", style = MaterialTheme.typography.labelMedium)
+        Column(Modifier.then(if (isFirstOfDay) Modifier.testTag("ledger-day-${item.localDateEpochDay}") else Modifier)) {
+            if (isFirstOfDay) {
+                Row(
+                    Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 14.dp),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically,
+                ) {
+                    Text(
+                        LocalDate.ofEpochDay(item.localDateEpochDay).format(LEDGER_DAY_FORMAT),
+                        fontWeight = FontWeight.SemiBold,
+                    )
+                    Text(
+                        "支 ${item.dailyExpense.displayCny()}  收 ${item.dailyIncome.displayCny()}",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    )
+                }
+                HorizontalDivider()
+            }
+            LedgerTransactionRow(item, onClick)
+            if (!isLastOfDay) {
+                HorizontalDivider(Modifier.padding(start = 16.dp))
+            }
+        }
     }
 }
 
 @Composable
-private fun TransactionCard(
+private fun LedgerTransactionRow(
     item: LedgerTransaction,
     onClick: (String) -> Unit,
-    markReady: Boolean,
 ) {
-    Card(
+    val flow = if (item.type == TransactionType.TRANSFER) {
+        "${item.accountName} → ${item.targetAccountName.orEmpty()}"
+    } else {
+        item.accountName
+    }
+    val amount = when (item.type) {
+        TransactionType.EXPENSE -> "-${item.amount.displayCny()}"
+        TransactionType.INCOME -> item.amount.displayCny(showPositiveSign = true)
+        TransactionType.TRANSFER -> item.amount.displayCny()
+    }
+    val localTime = item.occurredAt.atZone(item.zoneId).format(LEDGER_TIME_FORMAT)
+    Row(
         Modifier
             .fillMaxWidth()
             .testTag("ledger-item")
-            .onGloballyPositioned {
-                if (markReady) BenchmarkUiSignals.mark(BenchmarkUiSignals.LEDGER_READY)
-            }
-            .clickable { onClick(item.id) },
+            .clickable { onClick(item.id) }
+            .padding(horizontal = 16.dp, vertical = 14.dp),
+        horizontalArrangement = Arrangement.spacedBy(12.dp),
+        verticalAlignment = Alignment.CenterVertically,
     ) {
-        Row(
-            Modifier.fillMaxWidth().padding(14.dp),
-            horizontalArrangement = Arrangement.spacedBy(12.dp),
-            verticalAlignment = Alignment.CenterVertically,
-        ) {
-            Column(Modifier.weight(1f)) {
-                Text(item.categoryName ?: item.type.label(), fontWeight = FontWeight.SemiBold)
-                val flow = if (item.type == TransactionType.TRANSFER) {
-                    "${item.accountName} → ${item.targetAccountName.orEmpty()}"
-                } else item.accountName
-                Text(flow, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
-                item.note?.let { Text(it, style = MaterialTheme.typography.bodySmall, maxLines = 1) }
-            }
-            val amount = when (item.type) {
-                TransactionType.EXPENSE -> "-${item.amount.displayCny()}"
-                TransactionType.INCOME -> item.amount.displayCny(showPositiveSign = true)
-                TransactionType.TRANSFER -> item.amount.displayCny()
-            }
-            Text(amount, fontWeight = FontWeight.SemiBold)
+        Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(3.dp)) {
+            Text(item.categoryName ?: item.type.label(), fontWeight = FontWeight.SemiBold)
+            Text(
+                "$localTime · $flow",
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+            )
+            item.note?.let { Text(it, style = MaterialTheme.typography.bodySmall, maxLines = 1) }
         }
+        Text(amount, fontWeight = FontWeight.SemiBold)
     }
 }
 
@@ -400,3 +458,8 @@ internal fun TransactionType.label(): String = when (this) {
     TransactionType.INCOME -> "收入"
     TransactionType.TRANSFER -> "转账"
 }
+
+private val LEDGER_DAY_FORMAT: DateTimeFormatter =
+    DateTimeFormatter.ofPattern("M月d日 EEEE", Locale.SIMPLIFIED_CHINESE)
+private val LEDGER_TIME_FORMAT: DateTimeFormatter =
+    DateTimeFormatter.ofPattern("HH:mm", Locale.SIMPLIFIED_CHINESE)
