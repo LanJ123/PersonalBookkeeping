@@ -236,7 +236,6 @@ fun BookkeepingApp(
                     DataTransferKey -> NavEntry(key) {
                         DataTransferScreen(
                             state = currentSettingsState.value,
-                            onBack = { backStack.removeLastOrNull() },
                             onBackup = settingsViewModel::createBackup,
                             onRestoreSelected = settingsViewModel::inspectBackup,
                             onConfirmRestore = settingsViewModel::confirmRestore,
@@ -251,7 +250,6 @@ fun BookkeepingApp(
                             themeMode = currentThemeMode.value,
                             appLockEnabled = currentAppLockEnabled.value,
                             appLockMessage = currentAppLockMessage.value,
-                            onBack = { backStack.removeLastOrNull() },
                             onAmountsHiddenChanged = settingsViewModel::setHideAmounts,
                             onThemeModeChanged = settingsViewModel::setThemeMode,
                             onAppLockChanged = onAppLockChanged,
@@ -261,7 +259,6 @@ fun BookkeepingApp(
                         BudgetsScreen(
                             state = currentInsightsState.value,
                             snackbarHostState = budgetSnackbar,
-                            onBack = { backStack.removeLastOrNull() },
                             onPreviousMonth = insightsViewModel::previousMonth,
                             onNextMonth = insightsViewModel::nextMonth,
                             onSave = insightsViewModel::saveBudget,
@@ -273,7 +270,6 @@ fun BookkeepingApp(
                         AccountsScreen(
                             state = currentManagementState.value,
                             snackbarHostState = accountSnackbar,
-                            onBack = { backStack.removeLastOrNull() },
                             onSave = managementViewModel::saveAccount,
                             onDeactivate = managementViewModel::deactivateAccount,
                             onMove = managementViewModel::moveAccount,
@@ -284,7 +280,6 @@ fun BookkeepingApp(
                         CategoriesScreen(
                             state = currentManagementState.value,
                             snackbarHostState = categorySnackbar,
-                            onBack = { backStack.removeLastOrNull() },
                             onSave = managementViewModel::saveCategory,
                             onDeactivate = managementViewModel::deactivateCategory,
                             onMove = managementViewModel::moveCategory,
@@ -299,7 +294,6 @@ fun BookkeepingApp(
                         val detailState by detailViewModel.state.collectAsStateWithLifecycle()
                         TransactionDetailScreen(
                             state = detailState,
-                            onBack = { backStack.removeLastOrNull() },
                             onEdit = { openEditor(it) },
                             onDelete = {
                                 ledgerViewModel.delete(it)
@@ -330,7 +324,7 @@ fun BookkeepingApp(
                             onDateSelected = editorViewModel::onDateSelected,
                             onTimeSelected = editorViewModel::onTimeSelected,
                             onSave = editorViewModel::save,
-                            onBack = { backStack.removeLastOrNull() },
+                            onSaved = { backStack.removeLastOrNull() },
                         )
                     }
                     else -> error("Unknown navigation key: $key")

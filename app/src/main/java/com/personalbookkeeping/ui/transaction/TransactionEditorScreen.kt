@@ -5,7 +5,6 @@ import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
@@ -26,12 +25,11 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.OutlinedTextField
-import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.material3.TimePicker
-import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -57,7 +55,6 @@ import com.personalbookkeeping.domain.model.TransactionType
 import com.personalbookkeeping.domain.validation.TransactionValidationError
 import com.personalbookkeeping.ui.theme.IosSegmentOption
 import com.personalbookkeeping.ui.theme.IosSegmentedControl
-import com.personalbookkeeping.ui.theme.IosBackButton
 import java.time.Instant
 import java.time.ZoneOffset
 import java.time.format.DateTimeFormatter
@@ -76,41 +73,35 @@ fun TransactionEditorScreen(
     onDateSelected: (Long) -> Unit,
     onTimeSelected: (Int, Int) -> Unit,
     onSave: () -> Unit,
-    onBack: (() -> Unit)? = null,
+    onSaved: () -> Unit = {},
 ) {
-    Scaffold(
+    LaunchedEffect(state.saveStatus) {
+        if (state.saveStatus == SaveStatus.SAVED) onSaved()
+    }
+
+    LazyColumn(
         modifier = Modifier
+            .fillMaxSize()
             .semantics { testTagsAsResourceId = true }
             .onGloballyPositioned {
                 BenchmarkUiSignals.mark(BenchmarkUiSignals.EDITOR_READY)
             },
-        topBar = {
-            TopAppBar(
-                title = {
-                    Column {
-                        Text(if (state.isEditing) "编辑流水" else stringResourceSafe(R.string.transaction_editor_title))
-                        Text(
-                            text = stringResourceSafe(R.string.iteration_badge),
-                            style = MaterialTheme.typography.labelSmall,
-                            color = MaterialTheme.colorScheme.primary,
-                        )
-                    }
-                },
-                navigationIcon = {
-                    if (onBack != null) IosBackButton(onBack)
-                },
-                expandedHeight = 52.dp,
-                windowInsets = WindowInsets(0.dp),
-            )
-        },
-    ) { innerPadding ->
-        LazyColumn(
-            modifier = Modifier
-                .fillMaxSize()
-                .padding(innerPadding),
-            contentPadding = PaddingValues(horizontal = 20.dp, vertical = 12.dp),
-            verticalArrangement = Arrangement.spacedBy(16.dp),
-        ) {
+        contentPadding = PaddingValues(start = 20.dp, end = 20.dp, bottom = 24.dp),
+        verticalArrangement = Arrangement.spacedBy(16.dp),
+    ) {
+            item {
+                Text(
+                    text = if (state.isEditing) {
+                        "编辑流水"
+                    } else {
+                        stringResourceSafe(R.string.transaction_editor_title)
+                    },
+                    modifier = Modifier.padding(top = 8.dp, bottom = 4.dp),
+                    style = MaterialTheme.typography.headlineLarge,
+                    fontWeight = FontWeight.Bold,
+                )
+            }
+
             item {
                 TransactionTypeSelector(
                     selected = state.type,
@@ -265,7 +256,6 @@ fun TransactionEditorScreen(
             }
 
         }
-    }
 }
 
 @OptIn(ExperimentalMaterial3Api::class)

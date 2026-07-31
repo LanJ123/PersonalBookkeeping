@@ -91,20 +91,29 @@ class PhysicalDeviceComposeUiTest {
     }
 
     @Test
-    fun transactionEditorSavesAndShowsFeedback() {
-        clickText("＋记一笔")
-        waitForText("金额")
+    fun transactionEditorSavesAndReturnsToEveryRootSource() {
+        listOf(
+            SourceCase(tab = null, returnText = "今日支出", amount = "12.31"),
+            SourceCase(tab = "流水", returnText = "搜索备注", amount = "12.32"),
+            SourceCase(tab = "统计", returnText = "上一月", amount = "12.33"),
+            SourceCase(tab = "设置", returnText = "账户管理", amount = "12.34"),
+        ).forEach { source ->
+            source.tab?.let(::clickBottomTab)
+            clickText("＋记一笔")
+            waitForText("金额")
 
-        val amount = waitForResource(AMOUNT_FIELD_TAG)
-        amount.click()
-        amount.text = SAVE_AMOUNT
-        device.pressBack()
+            val amount = waitForResource(AMOUNT_FIELD_TAG)
+            amount.click()
+            amount.text = source.amount
+            device.pressBack()
 
-        findSaveButton().click()
-        assertNotNull(
-            "保存后未显示成功反馈",
-            device.wait(Until.findObject(By.res(SAVE_SUCCESS_TAG)), UI_TIMEOUT_MS),
-        )
+            findSaveButton().click()
+            waitForText(source.returnText)
+            assertTrue(
+                "从${source.tab ?: "首页"}保存后仍停留在记账页",
+                device.wait(Until.gone(By.res(AMOUNT_FIELD_TAG)), UI_TIMEOUT_MS),
+            )
+        }
     }
 
     @Test
@@ -203,13 +212,17 @@ class PhysicalDeviceComposeUiTest {
         return waitForResource(SAVE_BUTTON_TAG)
     }
 
+    private data class SourceCase(
+        val tab: String?,
+        val returnText: String,
+        val amount: String,
+    )
+
     private companion object {
         const val TARGET_PACKAGE = "com.personalbookkeeping.app"
         const val HIDE_AMOUNTS_TAG = "privacy-hide-amounts"
         const val AMOUNT_FIELD_TAG = "transaction-amount"
         const val SAVE_BUTTON_TAG = "transaction-save"
-        const val SAVE_SUCCESS_TAG = "transaction-save-success"
-        const val SAVE_AMOUNT = "23.45"
         const val UI_TIMEOUT_MS = 15_000L
         const val SHORT_UI_TIMEOUT_MS = 2_000L
         const val DOCUMENT_PICKER_TIMEOUT_MS = 30_000L

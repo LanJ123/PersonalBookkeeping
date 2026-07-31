@@ -1,5 +1,6 @@
 package com.personalbookkeeping.ui.insights
 
+import androidx.compose.material3.SnackbarHostState
 import androidx.compose.ui.test.assertIsDisplayed
 import androidx.compose.ui.test.hasTestTag
 import androidx.compose.ui.test.hasText
@@ -158,6 +159,27 @@ class InsightsScreensTest {
         composeRule.onNodeWithText("比上月收入").assertIsDisplayed()
         composeRule.onNodeWithTag("statistics-list").performScrollToNode(hasText("月收入对比"))
         composeRule.onNodeWithText("月收入对比").assertIsDisplayed()
+    }
+
+    @Test
+    fun budgetsUsesLargeTitleAndBottomAddButton() {
+        composeRule.setContent {
+            BookkeepingTheme {
+                BudgetsScreen(
+                    state = InsightsUiState(period = PERIOD, isLoading = false),
+                    snackbarHostState = SnackbarHostState(),
+                    onPreviousMonth = {},
+                    onNextMonth = {},
+                    onSave = { _, _ -> true },
+                    onClear = {},
+                    onMessageConsumed = {},
+                )
+            }
+        }
+
+        composeRule.onNodeWithText("预算管理").assertIsDisplayed()
+        composeRule.onNodeWithText("‹ 返回").assertDoesNotExist()
+        composeRule.onNodeWithTag("budget-add-fab").assertIsDisplayed()
     }
 
     companion object {

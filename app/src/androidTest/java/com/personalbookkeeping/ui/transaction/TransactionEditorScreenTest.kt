@@ -34,6 +34,8 @@ class TransactionEditorScreenTest {
 
         composeRule.onNodeWithText("记一笔").assertIsDisplayed()
         composeRule.onNodeWithText("正在准备本地账本…").assertIsDisplayed()
+        assertTrue(composeRule.onAllNodesWithText("‹ 返回").fetchSemanticsNodes().isEmpty())
+        assertTrue(composeRule.onAllNodesWithText("I2 · 账户、分类与流水").fetchSemanticsNodes().isEmpty())
         assertTrue(composeRule.onAllNodesWithText("最近流水").fetchSemanticsNodes().isEmpty())
     }
 }

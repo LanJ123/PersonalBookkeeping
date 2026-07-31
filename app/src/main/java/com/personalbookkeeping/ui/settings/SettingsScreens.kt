@@ -7,7 +7,6 @@ import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
@@ -23,7 +22,6 @@ import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
-import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -32,19 +30,18 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.testTag
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import java.time.LocalDate
 import java.time.format.DateTimeFormatter
 import com.personalbookkeeping.domain.model.ThemeMode
 import com.personalbookkeeping.ui.theme.IosSegmentOption
 import com.personalbookkeeping.ui.theme.IosSegmentedControl
-import com.personalbookkeeping.ui.theme.IosBackButton
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun DataTransferScreen(
     state: SettingsUiState,
-    onBack: () -> Unit,
     onBackup: (Uri) -> Unit,
     onRestoreSelected: (Uri) -> Unit,
     onConfirmRestore: () -> Unit,
@@ -75,14 +72,14 @@ fun DataTransferScreen(
     )
 
     Column(Modifier.fillMaxSize()) {
-        TopAppBar(
-            title = { Text("数据与备份") },
-            navigationIcon = { IosBackButton(onBack) },
-            expandedHeight = 52.dp,
-            windowInsets = WindowInsets(0.dp),
+        Text(
+            "数据与备份",
+            modifier = Modifier.padding(start = 20.dp, end = 20.dp, top = 8.dp, bottom = 4.dp),
+            style = MaterialTheme.typography.headlineLarge,
+            fontWeight = FontWeight.Bold,
         )
         Column(
-            Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(20.dp),
+            Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(horizontal = 20.dp, vertical = 8.dp),
             verticalArrangement = Arrangement.spacedBy(14.dp),
         ) {
             Text("完整备份", style = MaterialTheme.typography.titleMedium)
@@ -177,20 +174,19 @@ fun PrivacySettingsScreen(
     themeMode: ThemeMode,
     appLockEnabled: Boolean,
     appLockMessage: String?,
-    onBack: () -> Unit,
     onAmountsHiddenChanged: (Boolean) -> Unit,
     onThemeModeChanged: (ThemeMode) -> Unit,
     onAppLockChanged: (Boolean) -> Unit,
 ) {
     Column(Modifier.fillMaxSize()) {
-        TopAppBar(
-            title = { Text("隐私与安全") },
-            navigationIcon = { IosBackButton(onBack) },
-            expandedHeight = 52.dp,
-            windowInsets = WindowInsets(0.dp),
+        Text(
+            "隐私与安全",
+            modifier = Modifier.padding(start = 20.dp, end = 20.dp, top = 8.dp, bottom = 4.dp),
+            style = MaterialTheme.typography.headlineLarge,
+            fontWeight = FontWeight.Bold,
         )
         Column(
-            Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(20.dp),
+            Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(horizontal = 20.dp, vertical = 8.dp),
             verticalArrangement = Arrangement.spacedBy(20.dp),
         ) {
             Text("主题", style = MaterialTheme.typography.titleMedium)

@@ -1,10 +1,11 @@
 package com.personalbookkeeping.ui.management
 
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
@@ -18,6 +19,7 @@ import androidx.compose.material3.Checkbox
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.FilterChip
+import androidx.compose.material3.FloatingActionButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.OutlinedTextField
@@ -25,7 +27,6 @@ import androidx.compose.material3.SnackbarHost
 import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
-import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
@@ -34,6 +35,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import com.personalbookkeeping.domain.model.AccountType
@@ -43,14 +45,12 @@ import com.personalbookkeeping.domain.model.ManagedAccount
 import com.personalbookkeeping.domain.model.ManagedCategory
 import com.personalbookkeeping.domain.model.MoveDirection
 import com.personalbookkeeping.ui.privacy.displayCny
-import com.personalbookkeeping.ui.theme.IosBackButton
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun AccountsScreen(
     state: ManagementUiState,
     snackbarHostState: SnackbarHostState,
-    onBack: () -> Unit,
     onSave: (String?, String, AccountType, String, Boolean) -> Unit,
     onDeactivate: (String) -> Unit,
     onMove: (String, MoveDirection) -> Unit,
@@ -59,27 +59,38 @@ fun AccountsScreen(
     var editing by remember { mutableStateOf<ManagedAccount?>(null) }
     var showDialog by remember { mutableStateOf(false) }
     MessageEffect(state, snackbarHostState, onMessageConsumed)
-    Column(Modifier.fillMaxSize()) {
-        TopAppBar(
-            title = { Text("账户管理") },
-            navigationIcon = { IosBackButton(onBack) },
-            expandedHeight = 52.dp,
-            windowInsets = WindowInsets(0.dp),
-            actions = { TextButton(onClick = { editing = null; showDialog = true }) { Text("新增") } },
-        )
-        if (state.isLoading) CenterLoading() else LazyColumn(
-            contentPadding = PaddingValues(16.dp),
-            verticalArrangement = Arrangement.spacedBy(10.dp),
+    Box(Modifier.fillMaxSize()) {
+        Column(Modifier.fillMaxSize()) {
+            Text(
+                "账户管理",
+                modifier = Modifier.padding(start = 20.dp, end = 20.dp, top = 8.dp, bottom = 4.dp),
+                style = MaterialTheme.typography.headlineLarge,
+                fontWeight = FontWeight.Bold,
+            )
+            if (state.isLoading) CenterLoading() else LazyColumn(
+                contentPadding = PaddingValues(start = 16.dp, top = 8.dp, end = 16.dp, bottom = 96.dp),
+                verticalArrangement = Arrangement.spacedBy(10.dp),
+            ) {
+                val active = state.accounts.filter { it.status == ItemStatus.ACTIVE }
+                val inactive = state.accounts.filter { it.status == ItemStatus.INACTIVE }
+                items(active, key = { it.id }) { account ->
+                    AccountCard(account, active.indexOf(account), active.lastIndex, { editing = account; showDialog = true }, onDeactivate, onMove)
+                }
+                if (inactive.isNotEmpty()) {
+                    item { Text("已停用", style = MaterialTheme.typography.titleMedium, modifier = Modifier.padding(top = 12.dp)) }
+                    items(inactive, key = { it.id }) { account -> AccountCard(account, -1, -1, {}, {}, { _, _ -> }) }
+                }
+            }
+        }
+        FloatingActionButton(
+            onClick = { editing = null; showDialog = true },
+            shape = CircleShape,
+            modifier = Modifier
+                .align(Alignment.BottomEnd)
+                .padding(20.dp)
+                .testTag("account-add-fab"),
         ) {
-            val active = state.accounts.filter { it.status == ItemStatus.ACTIVE }
-            val inactive = state.accounts.filter { it.status == ItemStatus.INACTIVE }
-            items(active, key = { it.id }) { account ->
-                AccountCard(account, active.indexOf(account), active.lastIndex, { editing = account; showDialog = true }, onDeactivate, onMove)
-            }
-            if (inactive.isNotEmpty()) {
-                item { Text("已停用", style = MaterialTheme.typography.titleMedium, modifier = Modifier.padding(top = 12.dp)) }
-                items(inactive, key = { it.id }) { account -> AccountCard(account, -1, -1, {}, {}, { _, _ -> }) }
-            }
+            Text("+", style = MaterialTheme.typography.headlineMedium)
         }
     }
     if (showDialog) AccountDialog(editing, { showDialog = false }) { id, name, type, opening, include ->
@@ -152,7 +163,6 @@ private fun AccountDialog(
 fun CategoriesScreen(
     state: ManagementUiState,
     snackbarHostState: SnackbarHostState,
-    onBack: () -> Unit,
     onSave: (String?, CategoryKind, String) -> Unit,
     onDeactivate: (String) -> Unit,
     onMove: (String, MoveDirection) -> Unit,
@@ -162,32 +172,43 @@ fun CategoriesScreen(
     var editing by remember { mutableStateOf<ManagedCategory?>(null) }
     var showDialog by remember { mutableStateOf(false) }
     MessageEffect(state, snackbarHostState, onMessageConsumed)
-    Column(Modifier.fillMaxSize()) {
-        TopAppBar(
-            title = { Text("分类管理") },
-            navigationIcon = { IosBackButton(onBack) },
-            expandedHeight = 52.dp,
-            windowInsets = WindowInsets(0.dp),
-            actions = { TextButton(onClick = { editing = null; showDialog = true }) { Text("新增") } },
-        )
-        Row(Modifier.padding(horizontal = 16.dp), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-            FilterChip(kind == CategoryKind.EXPENSE, { kind = CategoryKind.EXPENSE }, { Text("支出分类") })
-            FilterChip(kind == CategoryKind.INCOME, { kind = CategoryKind.INCOME }, { Text("收入分类") })
+    Box(Modifier.fillMaxSize()) {
+        Column(Modifier.fillMaxSize()) {
+            Text(
+                "分类管理",
+                modifier = Modifier.padding(start = 20.dp, end = 20.dp, top = 8.dp, bottom = 4.dp),
+                style = MaterialTheme.typography.headlineLarge,
+                fontWeight = FontWeight.Bold,
+            )
+            Row(Modifier.padding(horizontal = 16.dp), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                FilterChip(kind == CategoryKind.EXPENSE, { kind = CategoryKind.EXPENSE }, { Text("支出分类") })
+                FilterChip(kind == CategoryKind.INCOME, { kind = CategoryKind.INCOME }, { Text("收入分类") })
+            }
+            val categories = if (kind == CategoryKind.EXPENSE) state.expenseCategories else state.incomeCategories
+            if (state.isLoading) CenterLoading() else LazyColumn(
+                contentPadding = PaddingValues(start = 16.dp, top = 8.dp, end = 16.dp, bottom = 96.dp),
+                verticalArrangement = Arrangement.spacedBy(10.dp),
+            ) {
+                val active = categories.filter { it.status == ItemStatus.ACTIVE }
+                val inactive = categories.filter { it.status == ItemStatus.INACTIVE }
+                items(active, key = { it.id }) { category ->
+                    CategoryCard(category, active.indexOf(category), active.lastIndex, { editing = category; showDialog = true }, onDeactivate, onMove)
+                }
+                if (inactive.isNotEmpty()) {
+                    item { Text("已停用", style = MaterialTheme.typography.titleMedium, modifier = Modifier.padding(top = 12.dp)) }
+                    items(inactive, key = { it.id }) { category -> CategoryCard(category, -1, -1, {}, {}, { _, _ -> }) }
+                }
+            }
         }
-        val categories = if (kind == CategoryKind.EXPENSE) state.expenseCategories else state.incomeCategories
-        if (state.isLoading) CenterLoading() else LazyColumn(
-            contentPadding = PaddingValues(16.dp),
-            verticalArrangement = Arrangement.spacedBy(10.dp),
+        FloatingActionButton(
+            onClick = { editing = null; showDialog = true },
+            shape = CircleShape,
+            modifier = Modifier
+                .align(Alignment.BottomEnd)
+                .padding(20.dp)
+                .testTag("category-add-fab"),
         ) {
-            val active = categories.filter { it.status == ItemStatus.ACTIVE }
-            val inactive = categories.filter { it.status == ItemStatus.INACTIVE }
-            items(active, key = { it.id }) { category ->
-                CategoryCard(category, active.indexOf(category), active.lastIndex, { editing = category; showDialog = true }, onDeactivate, onMove)
-            }
-            if (inactive.isNotEmpty()) {
-                item { Text("已停用", style = MaterialTheme.typography.titleMedium, modifier = Modifier.padding(top = 12.dp)) }
-                items(inactive, key = { it.id }) { category -> CategoryCard(category, -1, -1, {}, {}, { _, _ -> }) }
-            }
+            Text("+", style = MaterialTheme.typography.headlineMedium)
         }
     }
     if (showDialog) {

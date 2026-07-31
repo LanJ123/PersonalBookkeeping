@@ -19,12 +19,32 @@ class SettingsScreensTest {
     val composeRule = createComposeRule()
 
     @Test
+    fun childScreensUseContentTitlesWithoutVisibleBackButton() {
+        composeRule.setContent {
+            BookkeepingTheme {
+                DataTransferScreen(
+                    state = SettingsUiState(),
+                    onBackup = {},
+                    onRestoreSelected = {},
+                    onConfirmRestore = {},
+                    onCancelRestore = {},
+                    onExportCsv = { _, _, _ -> },
+                    onInputError = {},
+                )
+            }
+        }
+
+        composeRule.onNodeWithText("数据与备份").assertIsDisplayed()
+        composeRule.onNodeWithText("‹ 返回").assertDoesNotExist()
+    }
+
+    @Test
     fun backupWarningDistinguishesUnencryptedBackupFromCsv() {
         composeRule.setContent {
             BookkeepingTheme {
                 DataTransferScreen(
                     state = SettingsUiState(),
-                    onBack = {}, onBackup = {}, onRestoreSelected = {}, onConfirmRestore = {},
+                    onBackup = {}, onRestoreSelected = {}, onConfirmRestore = {},
                     onCancelRestore = {}, onExportCsv = { _, _, _ -> }, onInputError = {},
                 )
             }
@@ -47,7 +67,7 @@ class SettingsScreensTest {
             BookkeepingTheme {
                 DataTransferScreen(
                     state = SettingsUiState(restoreReview = review),
-                    onBack = {}, onBackup = {}, onRestoreSelected = {}, onConfirmRestore = {},
+                    onBackup = {}, onRestoreSelected = {}, onConfirmRestore = {},
                     onCancelRestore = {}, onExportCsv = { _, _, _ -> }, onInputError = {},
                 )
             }
@@ -67,7 +87,6 @@ class SettingsScreensTest {
                     themeMode = ThemeMode.SYSTEM,
                     appLockEnabled = false,
                     appLockMessage = "设备尚未配置可用的屏幕锁或生物识别",
-                    onBack = {},
                     onAmountsHiddenChanged = {},
                     onThemeModeChanged = {},
                     onAppLockChanged = {},
@@ -88,7 +107,6 @@ class SettingsScreensTest {
                     themeMode = ThemeMode.SYSTEM,
                     appLockEnabled = false,
                     appLockMessage = null,
-                    onBack = {},
                     onAmountsHiddenChanged = {},
                     onThemeModeChanged = { selected = it },
                     onAppLockChanged = {},

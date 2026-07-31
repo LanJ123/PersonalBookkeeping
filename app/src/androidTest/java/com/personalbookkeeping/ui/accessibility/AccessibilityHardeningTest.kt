@@ -50,7 +50,6 @@ class LargeFontAccessibilityTest {
                     Box(Modifier.width(320.dp).height(600.dp)) {
                         DataTransferScreen(
                             state = SettingsUiState(),
-                            onBack = {},
                             onBackup = {},
                             onRestoreSelected = {},
                             onConfirmRestore = {},

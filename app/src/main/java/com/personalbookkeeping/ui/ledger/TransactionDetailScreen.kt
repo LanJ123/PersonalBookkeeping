@@ -3,7 +3,6 @@ package com.personalbookkeeping.ui.ledger
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
@@ -14,10 +13,8 @@ import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
-import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
-import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -29,7 +26,6 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import com.personalbookkeeping.domain.model.TransactionType
 import com.personalbookkeeping.ui.privacy.displayCny
-import com.personalbookkeeping.ui.theme.IosBackButton
 import java.time.ZoneId
 import java.time.format.DateTimeFormatter
 
@@ -37,59 +33,55 @@ import java.time.format.DateTimeFormatter
 @Composable
 fun TransactionDetailScreen(
     state: TransactionDetailUiState,
-    onBack: () -> Unit,
     onEdit: (String) -> Unit,
     onDelete: (String) -> Unit,
 ) {
     var confirmDelete by remember { mutableStateOf(false) }
-    Scaffold(
-        topBar = {
-            TopAppBar(
-                title = { Text("流水详情") },
-                navigationIcon = { IosBackButton(onBack) },
-                expandedHeight = 52.dp,
-                windowInsets = WindowInsets(0.dp),
-            )
-        },
-    ) { padding ->
+    Column(
+        modifier = Modifier
+            .fillMaxSize()
+            .padding(horizontal = 20.dp),
+        verticalArrangement = Arrangement.spacedBy(14.dp),
+    ) {
+        Text(
+            "流水详情",
+            modifier = Modifier.padding(top = 8.dp, bottom = 4.dp),
+            style = MaterialTheme.typography.headlineLarge,
+            fontWeight = FontWeight.Bold,
+        )
         when {
             state.isLoading -> Column(
-                Modifier.fillMaxSize().padding(padding),
+                Modifier.fillMaxWidth().weight(1f),
                 verticalArrangement = Arrangement.Center,
                 horizontalAlignment = Alignment.CenterHorizontally,
             ) { CircularProgressIndicator() }
             state.transaction == null -> Column(
-                Modifier.fillMaxSize().padding(padding).padding(24.dp),
+                Modifier.fillMaxWidth().weight(1f).padding(24.dp),
                 verticalArrangement = Arrangement.Center,
                 horizontalAlignment = Alignment.CenterHorizontally,
             ) { Text("这笔流水不存在或已删除") }
             else -> {
                 val transaction = state.transaction
-                Column(
-                    Modifier.fillMaxSize().padding(padding).padding(20.dp),
-                    verticalArrangement = Arrangement.spacedBy(14.dp),
-                ) {
-                    Text(transaction.type.label(), style = MaterialTheme.typography.titleMedium)
-                    val amount = when (transaction.type) {
-                        TransactionType.EXPENSE -> "-${transaction.amount.displayCny()}"
-                        TransactionType.INCOME -> transaction.amount.displayCny(showPositiveSign = true)
-                        TransactionType.TRANSFER -> transaction.amount.displayCny()
-                    }
-                    Text(amount, style = MaterialTheme.typography.headlineMedium, fontWeight = FontWeight.Bold)
-                    HorizontalDivider()
-                    FactRow("分类", transaction.categoryName ?: "—")
-                    FactRow("账户", transaction.accountName)
-                    transaction.targetAccountName?.let { FactRow("转入账户", it) }
-                    val formatter = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm")
-                        .withZone(ZoneId.systemDefault())
-                    FactRow("发生时间", formatter.format(transaction.occurredAt))
-                    FactRow("备注", transaction.note ?: "—")
-                    FactRow("创建时间", formatter.format(transaction.createdAt))
-                    FactRow("更新时间", formatter.format(transaction.updatedAt))
-                    Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-                        Button(onClick = { onEdit(transaction.id) }, modifier = Modifier.weight(1f)) { Text("编辑") }
-                        OutlinedButton(onClick = { confirmDelete = true }, modifier = Modifier.weight(1f)) { Text("删除") }
-                    }
+                Text(transaction.type.label(), style = MaterialTheme.typography.titleMedium)
+                val amount = when (transaction.type) {
+                    TransactionType.EXPENSE -> "-${transaction.amount.displayCny()}"
+                    TransactionType.INCOME -> transaction.amount.displayCny(showPositiveSign = true)
+                    TransactionType.TRANSFER -> transaction.amount.displayCny()
+                }
+                Text(amount, style = MaterialTheme.typography.headlineMedium, fontWeight = FontWeight.Bold)
+                HorizontalDivider()
+                FactRow("分类", transaction.categoryName ?: "—")
+                FactRow("账户", transaction.accountName)
+                transaction.targetAccountName?.let { FactRow("转入账户", it) }
+                val formatter = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm")
+                    .withZone(ZoneId.systemDefault())
+                FactRow("发生时间", formatter.format(transaction.occurredAt))
+                FactRow("备注", transaction.note ?: "—")
+                FactRow("创建时间", formatter.format(transaction.createdAt))
+                FactRow("更新时间", formatter.format(transaction.updatedAt))
+                Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+                    Button(onClick = { onEdit(transaction.id) }, modifier = Modifier.weight(1f)) { Text("编辑") }
+                    OutlinedButton(onClick = { confirmDelete = true }, modifier = Modifier.weight(1f)) { Text("删除") }
                 }
             }
         }

@@ -4,6 +4,8 @@ import android.graphics.Paint as AndroidPaint
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.gestures.detectTapGestures
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -24,6 +26,7 @@ import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.FloatingActionButton
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.MaterialTheme
@@ -34,23 +37,28 @@ import androidx.compose.material3.SnackbarHost
 import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
-import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.geometry.CornerRadius
 import androidx.compose.ui.layout.onGloballyPositioned
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Size
+import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.Path
+import androidx.compose.ui.graphics.PathEffect
 import androidx.compose.ui.graphics.nativeCanvas
 import androidx.compose.ui.graphics.toArgb
 import androidx.compose.ui.graphics.drawscope.Stroke
+import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.font.FontWeight
@@ -74,15 +82,11 @@ import com.personalbookkeeping.ui.privacy.displayCny
 import com.personalbookkeeping.ui.privacy.LocalAmountsHidden
 import com.personalbookkeeping.ui.theme.IosSegmentOption
 import com.personalbookkeeping.ui.theme.IosSegmentedControl
-import com.personalbookkeeping.ui.theme.IosBackButton
 import java.time.LocalDate
 import java.time.format.DateTimeFormatter
 import java.util.Locale
 import kotlin.math.PI
 import kotlin.math.cos
-import kotlin.math.floor
-import kotlin.math.log10
-import kotlin.math.pow
 import kotlin.math.roundToInt
 import kotlin.math.sin
 
@@ -637,14 +641,15 @@ private fun StatisticsTrendChart(
         MaterialTheme.colorScheme.tertiary
     }
     val values = trend.map { it.amountFor(type).minorUnits.coerceAtLeast(0L) }
-    val axisMax = niceAxisMax(values.maxOrNull() ?: 0L)
+    val scale = dynamicChartScale(values)
     val gridColor = MaterialTheme.colorScheme.outlineVariant
     val amountsHidden = LocalAmountsHidden.current
+    var selectedIndex by remember(trend, type) { mutableIntStateOf(trend.lastIndex) }
     val description = trend.joinToString("；") {
         if (amountsHidden) "${it.label}金额已隐藏" else
             "${it.label}${type.compositionLabel()}${it.amountFor(type).formatCny()}"
     }
-    val axisLabels = if (trend.size <= 12) trend else listOf(trend.first(), trend[trend.size / 2], trend.last())
+    val axisLabelIndices = trend.chartAxisLabelIndices()
     Card(Modifier.fillMaxWidth()) {
         Column(Modifier.padding(14.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
             Row(
@@ -653,41 +658,138 @@ private fun StatisticsTrendChart(
                     .semantics { contentDescription = description },
             ) {
                 Column(
-                    Modifier.width(58.dp).height(180.dp),
+                    Modifier
+                        .width(58.dp)
+                        .height(220.dp)
+                        .padding(top = 58.dp, bottom = 4.dp),
                     verticalArrangement = Arrangement.SpaceBetween,
                     horizontalAlignment = Alignment.End,
                 ) {
-                    (4 downTo 0).forEach { tick ->
+                    (scale.tickCount downTo 1).forEach { tick ->
                         Text(
-                            if (amountsHidden) "•••" else formatChartAmount(axisMax * tick / 4),
+                            if (amountsHidden) "•••" else formatAxisAmount(scale.valueAt(tick)),
                             style = MaterialTheme.typography.labelSmall,
                             color = MaterialTheme.colorScheme.onSurfaceVariant,
                         )
                     }
+                    Text("", style = MaterialTheme.typography.labelSmall)
                 }
-                Canvas(Modifier.weight(1f).height(180.dp).padding(start = 8.dp)) {
-                    val step = if (trend.size <= 1) size.width else size.width / (trend.size - 1)
-                    fun y(value: Long) = size.height - size.height * value / axisMax.toFloat()
-                    repeat(5) { index ->
-                        val y = size.height * index / 4f
+                Canvas(
+                    Modifier
+                        .weight(1f)
+                        .height(220.dp)
+                        .padding(start = 8.dp)
+                        .pointerInput(trend) {
+                            detectTapGestures { tap ->
+                                if (trend.size > 1) {
+                                    val horizontalPadding = 4.dp.toPx()
+                                    val chartWidth = (size.width - horizontalPadding * 2f)
+                                        .coerceAtLeast(1f)
+                                    selectedIndex = (
+                                        (tap.x - horizontalPadding) /
+                                            chartWidth * (trend.size - 1)
+                                        ).roundToInt().coerceIn(trend.indices)
+                                }
+                            }
+                        },
+                ) {
+                    val plotTop = 58.dp.toPx()
+                    val plotBottom = size.height - 4.dp.toPx()
+                    val plotHeight = (plotBottom - plotTop).coerceAtLeast(1f)
+                    val horizontalPadding = 4.dp.toPx()
+                    val plotWidth = (size.width - horizontalPadding * 2f).coerceAtLeast(1f)
+                    val step = if (trend.size <= 1) 0f else plotWidth / (trend.size - 1)
+                    fun x(index: Int) =
+                        if (trend.size <= 1) size.width / 2f else horizontalPadding + step * index
+                    fun y(value: Long) =
+                        plotBottom - plotHeight * value / scale.axisMax.toFloat()
+
+                    axisLabelIndices.forEach { index ->
+                        val x = x(index)
                         drawLine(
                             gridColor,
-                            Offset(0f, y),
-                            Offset(size.width, y),
+                            Offset(x, plotTop),
+                            Offset(x, plotBottom),
                             strokeWidth = 1.dp.toPx(),
                         )
                     }
+
+                    val areaPath = Path().apply {
+                        moveTo(x(0), plotBottom)
+                        lineTo(x(0), y(values.first()))
+                        values.drop(1).forEachIndexed { index, value ->
+                            lineTo(x(index + 1), y(value))
+                        }
+                        lineTo(x(values.lastIndex), plotBottom)
+                        close()
+                    }
+                    drawPath(
+                        path = areaPath,
+                        brush = Brush.verticalGradient(
+                            colors = listOf(lineColor.copy(alpha = 0.30f), Color.Transparent),
+                            startY = plotTop,
+                            endY = plotBottom,
+                        ),
+                    )
                     values.zipWithNext().forEachIndexed { index, (first, second) ->
                         drawLine(
                             lineColor,
-                            Offset(step * index, y(first)),
-                            Offset(step * (index + 1), y(second)),
-                            strokeWidth = 3.dp.toPx(),
+                            Offset(x(index), y(first)),
+                            Offset(x(index + 1), y(second)),
+                            strokeWidth = 2.dp.toPx(),
                         )
                     }
-                    values.forEachIndexed { index, value ->
-                        val x = if (values.size <= 1) size.width / 2 else step * index
-                        drawCircle(lineColor, 4.dp.toPx(), Offset(x, y(value)))
+
+                    val selected = selectedIndex.coerceIn(trend.indices)
+                    val point = Offset(x(selected), y(values[selected]))
+                    drawLine(
+                        color = lineColor.copy(alpha = 0.75f),
+                        start = Offset(point.x, plotTop),
+                        end = Offset(point.x, plotBottom),
+                        strokeWidth = 1.dp.toPx(),
+                        pathEffect = PathEffect.dashPathEffect(
+                            floatArrayOf(4.dp.toPx(), 3.dp.toPx()),
+                        ),
+                    )
+                    drawCircle(lineColor.copy(alpha = 0.18f), 9.dp.toPx(), point)
+                    drawCircle(lineColor, 4.dp.toPx(), point)
+
+                    val bubbleWidth = 92.dp.toPx()
+                    val bubbleHeight = 48.dp.toPx()
+                    val bubbleLeft = (point.x - bubbleWidth / 2f)
+                        .coerceIn(0f, size.width - bubbleWidth)
+                    val bubbleTop = 2.dp.toPx()
+                    drawRoundRect(
+                        color = lineColor,
+                        topLeft = Offset(bubbleLeft, bubbleTop),
+                        size = Size(bubbleWidth, bubbleHeight),
+                        cornerRadius = CornerRadius(10.dp.toPx()),
+                    )
+                    val pointer = Path().apply {
+                        moveTo(point.x - 6.dp.toPx(), bubbleTop + bubbleHeight)
+                        lineTo(point.x + 6.dp.toPx(), bubbleTop + bubbleHeight)
+                        lineTo(point.x, bubbleTop + bubbleHeight + 7.dp.toPx())
+                        close()
+                    }
+                    drawPath(pointer, lineColor)
+                    val textPaint = AndroidPaint(AndroidPaint.ANTI_ALIAS_FLAG).apply {
+                        color = Color.White.toArgb()
+                        textAlign = AndroidPaint.Align.CENTER
+                        textSize = 12.sp.toPx()
+                    }
+                    drawContext.canvas.nativeCanvas.apply {
+                        drawText(
+                            "${trend[selected].label}${type.compositionLabel()}",
+                            bubbleLeft + bubbleWidth / 2f,
+                            bubbleTop + 18.dp.toPx(),
+                            textPaint,
+                        )
+                        drawText(
+                            if (amountsHidden) "•••" else formatChartAmount(values[selected]),
+                            bubbleLeft + bubbleWidth / 2f,
+                            bubbleTop + 37.dp.toPx(),
+                            textPaint,
+                        )
                     }
                 }
             }
@@ -695,7 +797,9 @@ private fun StatisticsTrendChart(
                 Modifier.fillMaxWidth().padding(start = 66.dp),
                 horizontalArrangement = Arrangement.SpaceBetween,
             ) {
-                axisLabels.forEach { Text(it.label, style = MaterialTheme.typography.labelSmall) }
+                axisLabelIndices.forEach { index ->
+                    Text(trend[index].label, style = MaterialTheme.typography.labelSmall)
+                }
             }
         }
     }
@@ -713,7 +817,10 @@ private fun PeriodComparisonChart(state: StatisticsUiState) {
     } else {
         MaterialTheme.colorScheme.tertiary
     }
-    val max = comparisons.maxOf { it.amountFor(state.type).minorUnits }.coerceAtLeast(1L)
+    val values = comparisons.map {
+        it.amountFor(state.type).minorUnits.coerceAtLeast(0L)
+    }
+    val scale = dynamicChartScale(values, preferredTickCount = 5)
     val amountsHidden = LocalAmountsHidden.current
     val description = comparisons.joinToString("；") {
         if (amountsHidden) "${it.label}${state.type.compositionLabel()}金额已隐藏" else
@@ -729,8 +836,8 @@ private fun PeriodComparisonChart(state: StatisticsUiState) {
                 horizontalArrangement = Arrangement.spacedBy(4.dp),
                 verticalAlignment = Alignment.Bottom,
             ) {
-                comparisons.forEach { comparison ->
-                    val value = comparison.amountFor(state.type).minorUnits.coerceAtLeast(0L)
+                comparisons.forEachIndexed { index, comparison ->
+                    val value = values[index]
                     Column(
                         Modifier.weight(1f).fillMaxHeight(),
                         horizontalAlignment = Alignment.CenterHorizontally,
@@ -753,7 +860,8 @@ private fun PeriodComparisonChart(state: StatisticsUiState) {
                                     .width(28.dp)
                                     .fillMaxHeight(
                                         if (value == 0L) 0.01f else
-                                            (value.toFloat() / max.toFloat()).coerceIn(0.03f, 1f),
+                                            (value.toFloat() / scale.axisMax.toFloat())
+                                                .coerceIn(0.03f, 1f),
                                     )
                                     .background(color),
                             )
@@ -815,25 +923,26 @@ private fun PeriodExpenseComparison.amountFor(type: TransactionType): Money = wh
     TransactionType.TRANSFER -> Money.fromMinor(0)
 }
 
-private fun niceAxisMax(value: Long): Long {
-    if (value <= 0L) return 10_000L
-    val magnitude = 10.0.pow(floor(log10(value.toDouble())))
-    val normalized = value / magnitude
-    val nice = when {
-        normalized <= 1.0 -> 1.0
-        normalized <= 2.0 -> 2.0
-        normalized <= 5.0 -> 5.0
-        else -> 10.0
-    }
-    return (nice * magnitude).toLong().coerceAtLeast(1L)
-}
-
 private fun formatChartAmount(minorUnits: Long): String =
     if (minorUnits >= 1_000_000L) {
         String.format(Locale.ROOT, "¥%.2f万", minorUnits / 1_000_000.0)
     } else {
         Money.fromMinor(minorUnits).formatCny()
     }
+
+private fun formatAxisAmount(minorUnits: Long): String = when {
+    minorUnits >= 1_000_000L ->
+        String.format(Locale.ROOT, "¥%.1f万", minorUnits / 1_000_000.0)
+    minorUnits % 100L == 0L -> "¥${minorUnits / 100L}"
+    else -> String.format(Locale.ROOT, "¥%.2f", minorUnits / 100.0)
+}
+
+private fun List<StatisticsTrendPoint>.chartAxisLabelIndices(): List<Int> {
+    if (isEmpty()) return emptyList()
+    if (size <= 8) return indices.toList()
+    val stride = ((lastIndex.toFloat() / 7f).roundToInt()).coerceAtLeast(1)
+    return (0..lastIndex step stride).take(8)
+}
 
 private fun CategorySpending.shareOf(total: Money): Float =
     if (total.minorUnits <= 0L) 0f else
@@ -871,7 +980,6 @@ private val CATEGORY_CHART_COLORS = listOf(
 fun BudgetsScreen(
     state: InsightsUiState,
     snackbarHostState: SnackbarHostState,
-    onBack: () -> Unit,
     onPreviousMonth: () -> Unit,
     onNextMonth: () -> Unit,
     onSave: (String?, String) -> Boolean,
@@ -881,21 +989,37 @@ fun BudgetsScreen(
     var editing by remember { mutableStateOf<BudgetEditTarget?>(null) }
     MessageEffect(state, snackbarHostState, onMessageConsumed)
     Scaffold(
-        topBar = {
-            TopAppBar(
-                title = { Text("预算管理") },
-                navigationIcon = { IosBackButton(onBack) },
-                expandedHeight = 52.dp,
-                windowInsets = WindowInsets(0.dp),
-            )
+        contentWindowInsets = WindowInsets(0.dp),
+        floatingActionButton = {
+            FloatingActionButton(
+                onClick = {
+                    editing = BudgetEditTarget(
+                        categoryId = null,
+                        name = "本月总预算",
+                        current = state.insights.totalBudget?.limit,
+                    )
+                },
+                shape = CircleShape,
+                modifier = Modifier.testTag("budget-add-fab"),
+            ) {
+                Text("+", style = MaterialTheme.typography.headlineMedium)
+            }
         },
         snackbarHost = { SnackbarHost(snackbarHostState) },
     ) { padding ->
         if (state.isLoading) CenterLoading(padding) else LazyColumn(
             modifier = Modifier.fillMaxSize().padding(padding),
-            contentPadding = PaddingValues(16.dp),
+            contentPadding = PaddingValues(start = 16.dp, top = 8.dp, end = 16.dp, bottom = 96.dp),
             verticalArrangement = Arrangement.spacedBy(12.dp),
         ) {
+            item {
+                Text(
+                    "预算管理",
+                    modifier = Modifier.padding(start = 4.dp, bottom = 4.dp),
+                    style = MaterialTheme.typography.headlineLarge,
+                    fontWeight = FontWeight.Bold,
+                )
+            }
             item { MonthSwitcher(state.period, onPreviousMonth, onNextMonth) }
             item { Text("总支出预算", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.SemiBold) }
             item {
